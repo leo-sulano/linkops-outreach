@@ -2,9 +2,9 @@ export interface QualifyInput {
   domain: string;
   domainAuthority: number; // 0-100
   trafficPercentile: number; // 0-100
-  niches: string[]; // ["tech", "business", etc.]
+  niches: string[]; // ["tech", "business", etc.] - all publisher niches
   isSpam: boolean;
-  niche: string; // Primary niche for this campaign
+  niche: string; // Primary niche for this campaign - used for scoring factor
 }
 
 export interface DomainFactors {

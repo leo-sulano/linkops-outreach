@@ -1,4 +1,5 @@
-import { qualifyDomain, type DomainScore } from '../../../lib/paul/qualifier';
+import { qualifyDomain } from '../../../lib/paul/qualifier';
+import type { DomainScore } from '../../../lib/paul/qualifier';
 
 describe('Domain Qualifier', () => {
   it('should reject low-scoring domains (score < 40)', () => {
