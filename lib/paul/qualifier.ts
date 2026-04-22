@@ -1,4 +1,4 @@
-import { QualifyInput, DomainScore } from './types';
+import type { QualifyInput, DomainScore } from './types';
 
 export type { DomainScore } from './types';
 
