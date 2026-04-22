@@ -38,7 +38,7 @@ function calculateNicheMatch(inputNiches: string[], targetNiche: string): number
 export function qualifyDomain(input: QualifyInput): DomainScore {
   // Normalize inputs to 0-1 scale
   const daNormalized = Math.min(1, input.domainAuthority / 100);
-  const trafficNormalized = input.trafficPercentile / 100;
+  const trafficNormalized = Math.min(1, input.trafficPercentile / 100);
 
   // Niche match: 0-1
   const nicheMatch = calculateNicheMatch(input.niches, input.niche);
