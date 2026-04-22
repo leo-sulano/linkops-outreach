@@ -1,4 +1,4 @@
-import type { QualifyInput, DomainScore } from './types';
+import type { QualifyInput, DomainScore, DomainFactors } from './types';
 
 const NICHE_KEYWORDS: Record<string, string[]> = {
   tech: ['technology', 'software', 'ai', 'saas', 'startup', 'code', 'dev', 'tech', 'computer'],
@@ -84,7 +84,11 @@ export function qualifyDomain(input: QualifyInput): DomainScore {
   };
 }
 
-function getRecommendation(score: number, category: string, factors: any): string {
+function getRecommendation(
+  score: number,
+  category: 'reject' | 'standard' | 'warm' | 'premium',
+  factors: DomainFactors
+): string {
   if (category === 'reject') {
     return `Domain score too low (${score}). Consider finding higher-authority publishers.`;
   }
