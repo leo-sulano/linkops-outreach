@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Contact } from './types';
 import { ContactTableRow } from './ContactTableRow';
 import { ExpandedRowDetail } from './ExpandedRowDetail';
@@ -54,7 +54,7 @@ export function ContactTable({
         </thead>
         <tbody className="divide-y divide-slate-700">
           {contacts.map((contact) => (
-            <div key={contact.id} className="contents">
+            <React.Fragment key={contact.id}>
               <ContactTableRow
                 contact={contact}
                 isExpanded={expandedId === contact.id}
@@ -74,7 +74,7 @@ export function ContactTable({
                   }}
                 />
               )}
-            </div>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
