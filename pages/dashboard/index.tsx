@@ -52,6 +52,20 @@ export default function DashboardPage() {
     setContacts((prev) => prev.filter((c) => c.id !== contactId));
   };
 
+  const handleQualify = (contactId: string, score: any) => {
+    setContacts((prev) =>
+      prev.map((c) =>
+        c.id === contactId
+          ? {
+              ...c,
+              qualificationScore: score.score,
+              qualificationCategory: score.category,
+            }
+          : c
+      )
+    );
+  };
+
   const handleStartOutreach = () => {
     console.log('Start outreach clicked');
     alert('Outreach would start here (not yet wired to API)');
@@ -98,6 +112,7 @@ export default function DashboardPage() {
                 contacts={contacts}
                 onUpdateContact={handleUpdateContact}
                 onDeleteContact={handleDeleteContact}
+                onQualify={handleQualify}
               />
             </div>
           </div>

@@ -23,6 +23,8 @@ export interface Contact {
   notes: string;
   contentGuidelines: string;
   reply: 'yes' | 'no' | 'pending';
+  qualificationScore?: number; // 0-100 from Paul Qualifier
+  qualificationCategory?: 'reject' | 'standard' | 'warm' | 'premium'; // Category from Paul Qualifier
 }
 
 export interface DashboardStats {

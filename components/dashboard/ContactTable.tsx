@@ -7,12 +7,14 @@ interface ContactTableProps {
   contacts: Contact[];
   onUpdateContact: (contact: Contact) => void;
   onDeleteContact: (contactId: string) => void;
+  onQualify?: (contactId: string, score: any) => void;
 }
 
 export function ContactTable({
   contacts,
   onUpdateContact,
   onDeleteContact,
+  onQualify,
 }: ContactTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -50,6 +52,9 @@ export function ContactTable({
             <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
               Date Confirmed
             </th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
+              Qualification
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-700">
@@ -63,6 +68,7 @@ export function ContactTable({
                     expandedId === contact.id ? null : contact.id
                   )
                 }
+                onQualify={onQualify}
               />
               {expandedId === contact.id && (
                 <ExpandedRowDetail
