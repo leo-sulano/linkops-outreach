@@ -1,3 +1,4 @@
+import type { OutreachGeneratorInput } from '../../../lib/paul/types';
 import { generateOutreach } from '../../../lib/paul/generator';
 
 describe('Outreach Generator', () => {
@@ -75,7 +76,10 @@ describe('Outreach Generator', () => {
       acceptCasino: false
     });
 
-    // If acceptCasino=false, body should not mention gaming/casino content
+    // If acceptCasino=true, body SHOULD mention gaming/casino content
+    expect(casinoOk.body.toLowerCase()).toMatch(/casino|gambling|gaming/);
+
+    // If acceptCasino=false, body should NOT mention gaming/casino content
     expect(casinoNo.body.toLowerCase()).not.toMatch(/casino|gambling|gaming/);
   });
 
