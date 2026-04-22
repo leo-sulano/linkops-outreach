@@ -24,18 +24,6 @@ export function Sidebar({ navCounts }: SidebarProps) {
         <h1 className="text-2xl font-black text-slate-100 tracking-tight">
           Link<span className="text-emerald-400">Ops</span>
         </h1>
-
-        {/* Paul Status */}
-        <div className="mt-3 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-xs font-bold text-black flex-shrink-0">
-            P
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black text-emerald-400">Paul</div>
-            <div className="text-xs font-mono text-slate-400">Active</div>
-          </div>
-          <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse"></div>
-        </div>
       </div>
 
       {/* Navigation */}

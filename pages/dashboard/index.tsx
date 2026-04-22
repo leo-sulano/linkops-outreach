@@ -52,9 +52,9 @@ export default function DashboardPage() {
     setContacts((prev) => prev.filter((c) => c.id !== contactId));
   };
 
-  const handleRunPaul = () => {
-    console.log('Run Paul clicked');
-    alert('Paul outreach would start here (not yet wired to API)');
+  const handleStartOutreach = () => {
+    console.log('Start outreach clicked');
+    alert('Outreach would start here (not yet wired to API)');
   };
 
   const handleRefresh = () => {
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <TopBar onRunPaul={handleRunPaul} onRefresh={handleRefresh} />
+        <TopBar onStartOutreach={handleStartOutreach} onRefresh={handleRefresh} />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
