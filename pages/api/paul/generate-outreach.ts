@@ -1,5 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { generateOutreach, type OutreachGeneratorOutput } from '../../../lib/paul';
+import { generateEmailBody, generateEmailSubject } from '@/lib/integrations/openai';
+import { getContact, createMessage } from '@/lib/integrations/supabase';
+import { NotFoundError } from '@/lib/integrations/errors';
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,7 +21,10 @@ export default async function handler(
       domainAuthority,
       priorDeals,
       acceptCasino,
-      acceptBetting
+      acceptBetting,
+      contactName,
+      relationshipTier,
+      priceRange,
     } = req.body;
 
     // Validate required fields
@@ -35,7 +41,45 @@ export default async function handler(
       });
     }
 
-    // Call Paul Generator
+    // Get contact from Supabase
+    let contact;
+    try {
+      contact = await getContact(domain);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: `Contact not found for domain: ${domain}` });
+      }
+      throw error;
+    }
+
+    // Generate email using OpenAI
+    const tier = (relationshipTier || 'new') as 'new' | 'warm' | 'trusted' | 'vip';
+    const range = priceRange || '500-2000';
+    const subject = await generateEmailSubject({
+      domain,
+      niche,
+      contactName: contactName || publisherName || 'there',
+      relationshipTier: tier,
+    });
+    const body = await generateEmailBody({
+      domain,
+      niche,
+      contactName: contactName || publisherName || 'there',
+      relationshipTier: tier,
+      priceRange: range,
+    });
+
+    // Log message to Supabase
+    const message = await createMessage({
+      contact_id: contact.id,
+      direction: 'outbound',
+      from_email: 'outreach@yourcompany.com',
+      to_email: contact.email1 || contact.email_account || '',
+      subject,
+      body,
+    });
+
+    // Also call Paul Generator for backward compatibility
     const result: OutreachGeneratorOutput = generateOutreach({
       domain,
       publisherName: publisherName || 'there',
@@ -47,14 +91,19 @@ export default async function handler(
       acceptBetting: acceptBetting || false
     });
 
-    // Log to activity (mock for now - Phase 2 adds real logging)
-    console.log(`[Paul] Generated outreach for ${domain}: template=${result.template}, tone=${result.tone}`);
+    console.log(`[Paul] Generated outreach for ${domain}: subject="${subject}"`);
 
     return res.status(200).json({
       success: true,
-      data: result
+      domain,
+      subject,
+      body,
+      messageId: message.id,
+      createdAt: message.created_at,
+      tone: tier,
+      data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Generate outreach endpoint error:', error);
     return res.status(500).json({
       error: 'Internal server error',
