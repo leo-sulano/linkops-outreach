@@ -111,9 +111,9 @@ export function getMockSubject(category: string, domain: string, niche: string, 
   const template = templates[Math.floor(Math.random() * templates.length)];
 
   return template
-    .replace('{domain}', domain)
-    .replace('{niche}', niche)
-    .replace('{publisherName}', publisherName || 'there');
+    .replace(/\{domain\}/g, domain)
+    .replace(/\{niche\}/g, niche)
+    .replace(/\{publisherName\}/g, publisherName || 'there');
 }
 
 export function getMockBody(category: string, domain: string, niche: string, publisherName?: string, priorDeals?: boolean, acceptCasino?: boolean): string {
@@ -137,7 +137,7 @@ export function getMockBody(category: string, domain: string, niche: string, pub
   }
 
   // Filter casino content if not accepted
-  if (acceptCasino === false && niche.toLowerCase().includes('gambl')) {
+  if (acceptCasino === false && /casino|gambl|gaming|slots/i.test(niche)) {
     body = body.replace(/casino|gambling|gaming|slots/gi, 'entertainment');
   }
 

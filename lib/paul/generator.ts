@@ -42,4 +42,3 @@ export function generateOutreach(input: OutreachGeneratorInput): OutreachGenerat
   };
 }
 
-export type { OutreachGeneratorOutput } from './types';
