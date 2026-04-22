@@ -1,5 +1,7 @@
 import { QualifyInput, DomainScore } from './types';
 
+export type { DomainScore } from './types';
+
 /**
  * Qualifies a domain based on composite scoring:
  * Score = (DA × 0.4) + (Traffic% × 0.3) + (Niche × 0.2) + (AntiSpam × 0.1)
