@@ -1,15 +1,26 @@
-import { ProspectData, QualificationResult } from './types';
+import { QualifyInput, DomainScore } from './types';
 
 /**
- * Qualifies a prospect based on their company data
- * @param prospect - The prospect data to evaluate
- * @returns Qualification result with score and reasons
+ * Qualifies a domain based on composite scoring:
+ * Score = (DA × 0.4) + (Traffic% × 0.3) + (Niche × 0.2) + (AntiSpam × 0.1)
+ *
+ * Categories:
+ * - reject: score < 40
+ * - standard: 40-59
+ * - warm: 60-79
+ * - premium: >= 80
  */
-export function qualifyProspect(prospect: ProspectData): QualificationResult {
-  // TODO: Implement qualification logic
+export function qualifyDomain(input: QualifyInput): DomainScore {
+  // TODO: implement
   return {
-    qualified: false,
     score: 0,
-    reasons: [],
+    category: 'reject',
+    factors: {
+      da: 0,
+      traffic: 0,
+      niche: 0,
+      antiSpam: 0
+    },
+    recommendation: ''
   };
 }

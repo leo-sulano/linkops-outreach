@@ -1,109 +1,110 @@
-import { qualifyProspect } from '../../../lib/paul/qualifier';
-import { ProspectData } from '../../../lib/paul/types';
+import { qualifyDomain } from '../../../lib/paul/qualifier';
 
-describe('qualifyProspect', () => {
-  describe('High-quality prospects', () => {
-    it('should qualify a company with strong fundamentals (large, established, profitable)', () => {
-      const prospect: ProspectData = {
-        companySize: 500,
-        yearsInBusiness: 15,
-        monthlyRevenue: 250000,
-        hasMarketingTeam: true,
-        hasAutomationTools: true,
-      };
+describe('Domain Qualifier', () => {
+  it('should reject low-scoring domains (score < 40)', () => {
+    const input = {
+      domain: 'spam-domain.com',
+      domainAuthority: 15,
+      trafficPercentile: 10,
+      niches: ['general'],
+      isSpam: true,
+      niche: 'general'
+    };
 
-      const result = qualifyProspect(prospect);
+    const result = qualifyDomain(input);
 
-      expect(result.qualified).toBe(true);
-      expect(result.score).toBeGreaterThan(70);
-      expect(result.reasons).toContain('Company has strong size and revenue');
-      expect(result.reasons).toContain('Established business with marketing capability');
-    });
-
-    it('should qualify a growing company with marketing potential', () => {
-      const prospect: ProspectData = {
-        companySize: 150,
-        yearsInBusiness: 8,
-        monthlyRevenue: 85000,
-        hasMarketingTeam: true,
-        hasAutomationTools: false,
-      };
-
-      const result = qualifyProspect(prospect);
-
-      expect(result.qualified).toBe(true);
-      expect(result.score).toBeGreaterThan(60);
-      expect(result.reasons).toContain('Company has marketing team');
-    });
+    expect(result.score).toBeLessThan(40);
+    expect(result.category).toBe('reject');
   });
 
-  describe('Low-quality prospects', () => {
-    it('should not qualify a startup that is too young and unprofitable', () => {
-      const prospect: ProspectData = {
-        companySize: 5,
-        yearsInBusiness: 1,
-        monthlyRevenue: 8000,
-        hasMarketingTeam: false,
-        hasAutomationTools: false,
-      };
+  it('should categorize standard domains (score 40-59)', () => {
+    const input = {
+      domain: 'mediocre-site.com',
+      domainAuthority: 35,
+      trafficPercentile: 45,
+      niches: ['tech'],
+      isSpam: false,
+      niche: 'tech'
+    };
 
-      const result = qualifyProspect(prospect);
+    const result = qualifyDomain(input);
 
-      expect(result.qualified).toBe(false);
-      expect(result.score).toBeLessThan(40);
-      expect(result.reasons).toContain('Company too early stage');
-      expect(result.reasons).toContain('Revenue too low');
-    });
-
-    it('should not qualify a very small company without marketing', () => {
-      const prospect: ProspectData = {
-        companySize: 3,
-        yearsInBusiness: 2,
-        monthlyRevenue: 5000,
-        hasMarketingTeam: false,
-        hasAutomationTools: true,
-      };
-
-      const result = qualifyProspect(prospect);
-
-      expect(result.qualified).toBe(false);
-      expect(result.score).toBeLessThan(35);
-      expect(result.reasons).toContain('Company size too small');
-      expect(result.reasons).toContain('No dedicated marketing team');
-    });
+    expect(result.score).toBeGreaterThanOrEqual(40);
+    expect(result.score).toBeLessThan(60);
+    expect(result.category).toBe('standard');
   });
 
-  describe('Edge cases', () => {
-    it('should handle a company at the qualification boundary', () => {
-      const prospect: ProspectData = {
-        companySize: 50,
-        yearsInBusiness: 5,
-        monthlyRevenue: 30000,
-        hasMarketingTeam: true,
-        hasAutomationTools: false,
-      };
+  it('should categorize warm domains (score 60-79)', () => {
+    const input = {
+      domain: 'good-site.com',
+      domainAuthority: 55,
+      trafficPercentile: 65,
+      niches: ['tech', 'business'],
+      isSpam: false,
+      niche: 'tech'
+    };
 
-      const result = qualifyProspect(prospect);
+    const result = qualifyDomain(input);
 
-      expect(result.qualified).toBe(true);
-      expect(result.score).toBeGreaterThanOrEqual(50);
-      expect(result.score).toBeLessThanOrEqual(70);
+    expect(result.score).toBeGreaterThanOrEqual(60);
+    expect(result.score).toBeLessThan(80);
+    expect(result.category).toBe('warm');
+  });
+
+  it('should categorize premium domains (score >= 80)', () => {
+    const input = {
+      domain: 'authority-site.com',
+      domainAuthority: 80,
+      trafficPercentile: 85,
+      niches: ['business', 'tech'],
+      isSpam: false,
+      niche: 'business'
+    };
+
+    const result = qualifyDomain(input);
+
+    expect(result.score).toBeGreaterThanOrEqual(80);
+    expect(result.category).toBe('premium');
+  });
+
+  it('should return factor breakdown', () => {
+    const input = {
+      domain: 'test-site.com',
+      domainAuthority: 50,
+      trafficPercentile: 50,
+      niches: ['tech'],
+      isSpam: false,
+      niche: 'tech'
+    };
+
+    const result = qualifyDomain(input);
+
+    expect(result.factors).toBeDefined();
+    expect(result.factors.da).toBeDefined();
+    expect(result.factors.traffic).toBeDefined();
+    expect(result.factors.niche).toBeDefined();
+    expect(result.factors.antiSpam).toBeDefined();
+  });
+
+  it('should apply anti-spam penalty', () => {
+    const goodDomain = qualifyDomain({
+      domain: 'good.com',
+      domainAuthority: 50,
+      trafficPercentile: 50,
+      niches: ['tech'],
+      isSpam: false,
+      niche: 'tech'
     });
 
-    it('should return a valid score between 0 and 100', () => {
-      const prospect: ProspectData = {
-        companySize: 100,
-        yearsInBusiness: 7,
-        monthlyRevenue: 50000,
-        hasMarketingTeam: true,
-        hasAutomationTools: true,
-      };
-
-      const result = qualifyProspect(prospect);
-
-      expect(result.score).toBeGreaterThanOrEqual(0);
-      expect(result.score).toBeLessThanOrEqual(100);
-      expect(Array.isArray(result.reasons)).toBe(true);
+    const spamDomain = qualifyDomain({
+      domain: 'spam.com',
+      domainAuthority: 50,
+      trafficPercentile: 50,
+      niches: ['tech'],
+      isSpam: true,
+      niche: 'tech'
     });
+
+    expect(spamDomain.score).toBeLessThan(goodDomain.score);
   });
 });
