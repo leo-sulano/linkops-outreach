@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LinkOps — Paul AI Agent Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--panel:#0c0f16;--card:#111520;--card2:#161b27;--card3:#1c2133;
+  --b0:rgba(255,255,255,.04);--b1:rgba(255,255,255,.08);--b2:rgba(255,255,255,.14);--b3:rgba(255,255,255,.22);
+  --tx:#dde2f0;--sub:#7880a0;--dim:#353d54;
+  --paul:#6ee7b7;--paul2:rgba(110,231,183,.08);--paul3:rgba(110,231,183,.18);
+  --new:#38bdf8;--new2:rgba(56,189,248,.08);
+  --follow:#fbbf24;--follow2:rgba(251,191,36,.08);
+  --nego:#a78bfa;--nego2:rgba(167,139,250,.08);
+  --appr:#34d399;--appr2:rgba(52,211,153,.07);
+  --red:#f87171;--red2:rgba(248,113,113,.08);
+  --link:#f472b6;--link2:rgba(244,114,182,.08);
+}
+body{font-family:'Cabinet Grotesk',sans-serif;background:var(--bg);color:var(--tx);display:flex;height:100vh;overflow:hidden;font-size:13px}
+
+/* ─── SIDEBAR ─── */
+aside{width:230px;background:var(--panel);border-right:1px solid var(--b0);display:flex;flex-direction:column;flex-shrink:0}
+.logo-wrap{padding:18px 16px 14px;border-bottom:1px solid var(--b0)}
+.logo-eyebrow{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub)}
+.logo-name{font-size:22px;font-weight:900;letter-spacing:-.04em;margin-top:2px}
+.logo-name em{color:var(--paul);font-style:normal}
+.paul-status{display:flex;align-items:center;gap:7px;margin-top:9px;background:var(--paul2);border:1px solid rgba(110,231,183,.18);border-radius:8px;padding:7px 10px}
+.paul-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6ee7b7,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#000;flex-shrink:0}
+.paul-info{flex:1;min-width:0}
+.paul-name{font-size:11px;font-weight:800;color:var(--paul)}
+.paul-sub{font-size:9px;font-family:'DM Mono',monospace;color:var(--sub);margin-top:1px}
+.paul-dot{width:6px;height:6px;border-radius:50%;background:var(--paul);animation:blink 2s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-group{margin-bottom:14px}
+.nav-group-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:0 8px;margin-bottom:4px}
+.ni{display:flex;align-items:center;gap:8px;padding:9px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--sub);transition:all .12s;border:1px solid transparent;margin-bottom:2px;user-select:none}
+.ni:hover{background:var(--b0);color:var(--tx)}
+.ni.active{background:var(--b1);color:var(--tx);border-color:var(--b1)}
+.ni-ico{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.nbadge{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:20px;min-width:22px;text-align:center}
+.bn{background:var(--new2);color:var(--new)}
+.bf{background:var(--follow2);color:var(--follow)}
+.bng{background:var(--nego2);color:var(--nego)}
+.ba{background:var(--appr2);color:var(--appr)}
+.bl{background:var(--link2);color:var(--link)}
+.bi{background:rgba(56,189,248,.08);color:var(--new)}
+
+.sync-btn{margin:0 8px 8px;display:flex;align-items:center;gap:6px;background:var(--b0);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;cursor:pointer;transition:all .12s;color:var(--sub);font-size:11px;font-weight:700}
+.sync-btn:hover{background:var(--b1);color:var(--tx)}
+.sync-circle{width:7px;height:7px;border-radius:50%;background:var(--paul);animation:blink 2s infinite}
+
+.side-foot{padding:10px 14px;border-top:1px solid var(--b0);font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);line-height:1.7}
+.side-foot strong{color:var(--sub)}
+
+/* ─── TOPBAR ─── */
+main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:13px 22px;border-bottom:1px solid var(--b0);background:var(--panel);flex-shrink:0;gap:14px}
+.tb-info{flex:1;min-width:0}
+.tb-info h1{font-size:16px;font-weight:900;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-info p{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.tb-right{display:flex;gap:8px;flex-shrink:0;align-items:center}
+.btn{font-family:'Cabinet Grotesk',sans-serif;font-size:11.5px;font-weight:800;padding:7px 14px;border-radius:8px;border:1px solid var(--b2);cursor:pointer;transition:all .12s;background:transparent;color:var(--tx)}
+.btn:hover{background:var(--b0)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--paul);color:#000;border-color:var(--paul)}
+.btn.primary:hover{background:#9bf8d3}
+.btn.sm{padding:5px 10px;font-size:11px}
+.btn.blue{background:var(--new2);color:var(--new);border-color:rgba(56,189,248,.25)}
+.btn[disabled]{opacity:.3;cursor:not-allowed;pointer-events:none}
+
+/* ─── CONTENT ─── */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px 22px 0;flex-shrink:0}
+.sc{background:var(--card);border:1px solid var(--b0);border-radius:10px;padding:13px 15px;position:relative;overflow:hidden;transition:border-color .15s}
+.sc:hover{border-color:var(--b1)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:10px 10px 0 0}
+.sc.sn::before{background:var(--new)}.sc.sf::before{background:var(--follow)}.sc.sg::before{background:var(--nego)}.sc.sa::before{background:var(--appr)}.sc.sl::before{background:var(--link)}.sc.sp::before{background:var(--paul)}
+.sl2{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:5px}
+.sv{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.ss2{font-size:10px;color:var(--sub);margin-top:3px;font-family:'DM Mono',monospace}
+.sw{padding:14px 22px;flex:1;overflow-y:auto}
+
+/* tables */
+.tbl-box{background:var(--card);border:1px solid var(--b0);border-radius:11px;overflow:hidden;margin-bottom:18px}
+table{width:100%;border-collapse:collapse}
+th{font-family:'DM Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--sub);padding:10px 14px;text-align:left;border-bottom:1px solid var(--b0);background:rgba(255,255,255,.01);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--b0);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.015)}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-ttl{font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px}
+.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.fb{font-family:'DM Mono',monospace;font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--b1);background:transparent;color:var(--sub);cursor:pointer;transition:all .12s}
+.fb:hover,.fb.on{background:var(--b1);color:var(--tx);border-color:var(--b2)}
+.si{font-family:'DM Mono',monospace;font-size:11px;background:var(--card);border:1px solid var(--b1);border-radius:7px;color:var(--tx);padding:5px 10px;outline:none;width:160px;transition:border-color .15s}
+.si:focus{border-color:var(--paul)}
+.si::placeholder{color:var(--dim)}
+
+/* ─── PAUL WORKFLOW VIEW ─── */
+.paul-layout{display:flex;flex:1;overflow:hidden}
+.paul-pipeline{width:62px;background:var(--panel);border-right:1px solid var(--b0);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;overflow-y:auto}
+.pp-step{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;cursor:pointer;transition:all .12s;border-radius:8px;width:50px}
+.pp-step:hover{background:var(--b0)}
+.pp-step.active{background:var(--b1)}
+.pp-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--b1)}
+.pp-label{font-family:'DM Mono',monospace;font-size:7px;color:var(--sub);text-align:center;letter-spacing:.04em;text-transform:uppercase;line-height:1.3}
+.pp-connector{width:1px;height:12px;background:var(--b1)}
+
+.paul-detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.paul-contacts{width:260px;flex-shrink:0;border-right:1px solid var(--b0);overflow-y:auto;background:var(--panel)}
+.pc-item{padding:12px 14px;border-bottom:1px solid var(--b0);cursor:pointer;transition:background .1s;position:relative}
+.pc-item:hover{background:var(--b0)}
+.pc-item.active{background:var(--paul2);border-left:2px solid var(--paul)}
+.pc-name{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-domain{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.pc-stage{font-size:9px;margin-top:5px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.paul-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.paul-thread{padding:14px 18px;border-bottom:1px solid var(--b0);background:var(--panel);flex-shrink:0}
+.paul-thread h2{font-size:14px;font-weight:900;letter-spacing:-.01em}
+.paul-thread p{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.paul-meta{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.messages{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.msg{display:flex;flex-direction:column;max-width:80%}
+.msg.paul{align-self:flex-end;align-items:flex-end}
+.msg.them{align-self:flex-start;align-items:flex-start}
+.msg-who{font-size:9px;font-family:'DM Mono',monospace;color:var(--sub);margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.paul-badge{background:var(--paul2);color:var(--paul);border:1px solid rgba(110,231,183,.2);border-radius:20px;font-size:8px;padding:1px 6px;font-family:'DM Mono',monospace}
+.msg-bbl{padding:10px 14px;border-radius:10px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.msg.paul .msg-bbl{background:var(--paul2);border:1px solid rgba(110,231,183,.18);border-radius:10px 10px 2px 10px}
+.msg.them .msg-bbl{background:var(--card2);border:1px solid var(--b1);border-radius:10px 10px 10px 2px}
+.paul-sig{font-size:9px;color:var(--paul);font-family:'DM Mono',monospace;margin-top:4px;display:flex;align-items:center;gap:4px}
+.paul-sig-dot{width:4px;height:4px;border-radius:50%;background:var(--paul);animation:blink 1.5s infinite}
+.stage-bar{display:flex;align-items:center;gap:0;padding:0 18px;border-bottom:1px solid var(--b0);background:var(--card);flex-shrink:0}
+.stg{flex:1;text-align:center;padding:9px 4px;font-size:9px;font-family:'DM Mono',monospace;color:var(--sub);border-bottom:2px solid transparent;transition:all .15s;cursor:default;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.stg.done{color:var(--paul)}
+.stg.curr{color:var(--tx);border-bottom-color:var(--paul)}
+.stg-arrow{color:var(--dim);font-size:10px;flex-shrink:0}
+
+/* right panel */
+.paul-rpanel{width:220px;flex-shrink:0;border-left:1px solid var(--b0);overflow-y:auto;padding:14px;background:var(--panel)}
+.rp-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.rp-card{background:var(--card);border:1px solid var(--b0);border-radius:9px;padding:11px;margin-bottom:9px;transition:border-color .15s}
+.rp-card:hover{border-color:var(--b1)}
+.rp-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:5px}
+.rp-val{font-size:14px;font-weight:900;letter-spacing:-.02em}
+.price-line{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:11px;padding:4px 0;border-bottom:1px solid var(--b0)}
+.price-line:last-child{border-bottom:none}
+.price-from{font-size:9px;padding:1px 5px;border-radius:20px}
+.link-input-wrap{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.link-input{background:var(--card2);border:1px solid var(--b1);border-radius:6px;color:var(--tx);font-family:'DM Mono',monospace;font-size:10px;padding:6px 9px;outline:none;width:100%;transition:border-color .15s}
+.link-input:focus{border-color:var(--link)}
+.link-input::placeholder{color:var(--dim)}
+.link-saved{display:flex;align-items:flex-start;gap:6px;background:var(--link2);border:1px solid rgba(244,114,182,.2);border-radius:6px;padding:7px 9px;margin-bottom:5px;font-family:'DM Mono',monospace;font-size:10px;color:var(--link);word-break:break-all}
+.act-btn{width:100%;text-align:left;background:var(--card2);border:1px solid var(--b1);border-radius:7px;color:var(--tx);font-family:'DM Mono',monospace;font-size:10px;padding:8px 10px;cursor:pointer;transition:all .12s;margin-bottom:5px;line-height:1.4}
+.act-btn:hover{border-color:var(--paul);background:var(--paul2);color:var(--paul)}
+.act-btn.danger:hover{border-color:var(--red);background:var(--red2);color:var(--red)}
+.agreed-box{background:var(--appr2);border:1px solid rgba(52,211,153,.25);border-radius:9px;padding:12px;text-align:center;margin-bottom:10px}
+.agreed-amt{font-size:22px;font-weight:900;color:var(--appr);letter-spacing:-.03em}
+.agreed-lbl{font-size:9px;font-family:'DM Mono',monospace;color:var(--appr);margin-top:2px}
+
+/* ─── LINK TRACKER ─── */
+.lt-layout{display:flex;flex:1;overflow:hidden}
+.lt-main{flex:1;overflow-y:auto;padding:14px 22px}
+.link-row{background:var(--card);border:1px solid var(--b0);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:border-color .15s}
+.link-row:hover{border-color:var(--b1)}
+.lr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.lr-site{font-size:13px;font-weight:800}
+.lr-domain{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.lr-links{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.lr-link{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--b0);border-radius:7px;padding:8px 10px;font-family:'DM Mono',monospace;font-size:10px}
+.lr-link a{color:var(--link);text-decoration:none;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-link a:hover{text-decoration:underline}
+.lr-link-meta{color:var(--sub);font-size:9px;white-space:nowrap}
+.add-link-row{display:flex;gap:6px;margin-top:8px}
+.add-link-input{flex:1;background:var(--card2);border:1px solid var(--b1);border-radius:7px;color:var(--tx);font-family:'DM Mono',monospace;font-size:11px;padding:7px 10px;outline:none;transition:border-color .15s}
+.add-link-input:focus{border-color:var(--link)}
+.add-link-input::placeholder{color:var(--dim)}
+
+/* ─── INBOX ─── */
+.inbox-layout{display:flex;flex:1;overflow:hidden}
+.inbox-list{width:270px;flex-shrink:0;border-right:1px solid var(--b0);overflow-y:auto;background:var(--panel)}
+.it{padding:12px 14px;border-bottom:1px solid var(--b0);cursor:pointer;transition:background .1s;position:relative}
+.it:hover{background:var(--b0)}
+.it.active{background:var(--paul2);border-left:2px solid var(--paul)}
+.it.unread .it-name{font-weight:800;color:var(--tx)}
+.it-name{font-size:12.5px;font-weight:600;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:40px}
+.it-sub{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.it-prv{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-family:'DM Mono',monospace}
+.it-time{font-size:9px;color:var(--dim);font-family:'DM Mono',monospace;position:absolute;top:12px;right:12px}
+.it-tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.unread-dot{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--new)}
+.inbox-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.inbox-hd{padding:14px 18px;border-bottom:1px solid var(--b0);background:var(--panel);flex-shrink:0}
+.inbox-hd h2{font-size:14px;font-weight:900;letter-spacing:-.01em}
+.inbox-hd p{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.inbox-meta{display:flex;gap:8px;margin-top:7px;flex-wrap:wrap;align-items:center}
+.inbox-analysis{width:230px;flex-shrink:0;border-left:1px solid var(--b0);overflow-y:auto;padding:14px;background:var(--panel)}
+.ia-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:10px}
+.ia-card{background:var(--card);border:1px solid var(--b0);border-radius:9px;padding:11px;margin-bottom:8px}
+.ia-lbl{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:5px}
+.progress{height:4px;background:var(--b1);border-radius:2px;overflow:hidden;margin-top:5px}
+.pbar{height:100%;border-radius:2px;transition:width .6s}
+
+/* ─── TEMPLATES ─── */
+.tmpl-layout{display:flex;flex:1;overflow:hidden}
+.tmpl-list{width:230px;flex-shrink:0;border-right:1px solid var(--b0);overflow-y:auto;padding:10px 8px;background:var(--panel)}
+.tl-item{padding:10px;border-radius:8px;cursor:pointer;margin-bottom:3px;border:1px solid transparent;transition:all .12s}
+.tl-item:hover{background:var(--b0)}
+.tl-item.active{background:var(--b1);border-color:var(--b1)}
+.tl-name{font-size:12.5px;font-weight:800}
+.tl-meta{font-size:10px;color:var(--sub);font-family:'DM Mono',monospace;margin-top:2px}
+.tl-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:1px 7px;border-radius:20px;margin-top:4px}
+.tmpl-edit{flex:1;display:flex;flex-direction:column;padding:18px 22px;gap:12px;overflow-y:auto}
+.tmpl-edit-hd{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.fe{display:flex;flex-direction:column;gap:5px}
+.fe label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--sub)}
+.fi{background:var(--card);border:1px solid var(--b1);border-radius:7px;color:var(--tx);font-family:'DM Mono',monospace;font-size:12px;padding:8px 11px;outline:none;width:100%;transition:border-color .15s}
+.fi:focus{border-color:var(--paul)}
+.ta{background:var(--card);border:1px solid var(--b1);border-radius:7px;color:var(--tx);font-family:'DM Mono',monospace;font-size:12px;padding:10px 12px;outline:none;resize:none;width:100%;min-height:180px;line-height:1.7;transition:border-color .15s}
+.ta:focus{border-color:var(--paul)}
+.hist-item{background:var(--card2);border:1px solid var(--b0);border-radius:7px;padding:9px 11px;margin-bottom:5px;cursor:pointer;transition:all .12s}
+.hist-item:hover{border-color:var(--b1)}
+.hi-v{font-family:'DM Mono',monospace;font-size:9px;color:var(--sub)}
+.hi-p{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+
+/* ─── MODAL ─── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--b2);border-radius:14px;padding:24px;width:460px;max-width:96vw;position:relative;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:15px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px}
+.modal .sub{font-size:11px;color:var(--sub);font-family:'DM Mono',monospace;margin-bottom:18px}
+.mcl{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--sub);font-size:18px;cursor:pointer;line-height:1}
+.mcl:hover{color:var(--tx)}
+.mf{display:flex;flex-direction:column;gap:4px;margin-bottom:11px}
+.mf label{font-family:'DM Mono',monospace;font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.1em}
+.mf input,.mf textarea{background:var(--card);border:1px solid var(--b1);border-radius:7px;color:var(--tx);font-family:'DM Mono',monospace;font-size:12px;padding:8px 11px;outline:none;width:100%;transition:border-color .15s}
+.mf input:focus,.mf textarea:focus{border-color:var(--paul)}
+.mf textarea{resize:vertical;min-height:80px;line-height:1.6}
+.m-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--card2);border:1px solid rgba(110,231,183,.25);color:var(--tx);font-family:'DM Mono',monospace;font-size:11px;padding:9px 18px;border-radius:9px;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade{animation:fadeUp .22s ease both}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside>
+  <div class="logo-wrap">
+    <div class="logo-eyebrow">n8n · AI outreach</div>
+    <div class="logo-name">Link<em>Ops</em></div>
+    <div class="paul-status">
+      <div class="paul-avatar">P</div>
+      <div class="paul-info">
+        <div class="paul-name">Paul — AI Agent</div>
+        <div class="paul-sub">Acting as human · online</div>
+      </div>
+      <div class="paul-dot"></div>
+    </div>
+  </div>
+
+  <nav>
+    <div class="nav-group">
+      <div class="nav-group-label">Paul's Pipeline</div>
+      <div class="ni active" onclick="go('paul',this)">
+        <div class="ni-ico" style="background:var(--paul2)">🤖</div>
+        Paul's Workflow
+        <span class="nbadge" id="b-paul" style="background:var(--paul2);color:var(--paul)">0</span>
+      </div>
+      <div class="ni" onclick="go('new',this)">
+        <div class="ni-ico" style="background:var(--new2)">✉</div>
+        Send to New Email
+        <span class="nbadge bn" id="b-new">0</span>
+      </div>
+      <div class="ni" onclick="go('follow',this)">
+        <div class="ni-ico" style="background:var(--follow2)">↩</div>
+        Send Follow Up
+        <span class="nbadge bf" id="b-follow">0</span>
+      </div>
+      <div class="ni" onclick="go('nego',this)">
+        <div class="ni-ico" style="background:var(--nego2)">⚖</div>
+        Under Negotiation
+        <span class="nbadge bng" id="b-nego">0</span>
+      </div>
+      <div class="ni" onclick="go('appr',this)">
+        <div class="ni-ico" style="background:var(--appr2)">✓</div>
+        Approved
+        <span class="nbadge ba" id="b-appr">0</span>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Tools</div>
+      <div class="ni" onclick="go('links',this)">
+        <div class="ni-ico" style="background:var(--link2)">⛓</div>
+        Link Tracker
+        <span class="nbadge bl" id="b-links">0</span>
+      </div>
+      <div class="ni" onclick="go('inbox',this)">
+        <div class="ni-ico" style="background:var(--new2)">◉</div>
+        Inbox Monitor
+        <span class="nbadge bi" id="b-inbox">0</span>
+      </div>
+      <div class="ni" onclick="go('tmpl',this)">
+        <div class="ni-ico" style="background:var(--b0)">⊞</div>
+        Paul's Templates
+        <span class="nbadge" style="background:var(--b0);color:var(--sub)">5</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="sync-btn" onclick="doSync()">
+    <span class="sync-circle"></span>
+    <span id="sync-lbl">Synced · Google Sheets</span>
+  </div>
+
+  <div class="side-foot">
+    Auto-detect: <strong>ON</strong><br>
+    Last sync: <strong id="sync-t">—</strong><br>
+    Spam guard: <strong style="color:var(--paul)">active</strong><br>
+    Paul status: <strong style="color:var(--paul)">running</strong>
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main>
+  <div class="topbar">
+    <div class="tb-info">
+      <h1 id="page-title">Paul's Workflow</h1>
+      <p id="page-desc">Full AI agent pipeline · outreach → negotiate → approve → finance → link tracking</p>
+    </div>
+    <div class="tb-right">
+      <button class="btn sm" onclick="openTmplModal()">Edit Templates</button>
+      <button class="btn primary" id="main-btn" onclick="handleMain()">Run Paul</button>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+</main>
+
+<!-- Finance Modal -->
+<div class="overlay" id="ov-finance">
+  <div class="modal">
+    <button class="mcl" onclick="closeOv('ov-finance')">✕</button>
+    <h2>Send to Finance</h2>
+    <p class="sub">Paul has agreed the deal — forward to invoicing</p>
+    <div class="mf"><label>Contact</label><input id="fm-n" readonly/></div>
+    <div class="mf"><label>Website</label><input id="fm-d" readonly/></div>
+    <div class="mf"><label>Original Ask</label><input id="fm-o" readonly/></div>
+    <div class="mf"><label>Agreed Price (Paul negotiated)</label><input id="fm-a" readonly/></div>
+    <div class="mf"><label>Insertion Link(s)</label><input id="fm-l" placeholder="Will be pulled from link tracker"/></div>
+    <div class="mf"><label>Finance Email</label><input id="fm-e" value="finance@yourcompany.com"/></div>
+    <div class="mf"><label>Notes for Finance</label><textarea id="fm-nt"></textarea></div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeOv('ov-finance')">Cancel</button>
+      <button class="btn primary" onclick="confirmFinance()">Send to Finance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Template Quick Edit -->
+<div class="overlay" id="ov-tmpl">
+  <div class="modal">
+    <button class="mcl" onclick="closeOv('ov-tmpl')">✕</button>
+    <h2>Paul's Template</h2>
+    <p class="sub">Paul uses this as a base — AI personalises per contact</p>
+    <div class="mf"><label>Name</label><input id="tm-n" value="First Outreach v3"/></div>
+    <div class="mf"><label>Subject</label><input id="tm-s" value="Quick question about your site — Paul"/></div>
+    <div class="mf"><label>Body</label><textarea style="min-height:160px" id="tm-b">Hi {{name}},
+
+Hope you're having a great week!
+
+My name is Paul, and I'm reaching out to ask if you'd be open to a link insertion on {{domain}}. We're working on a casino-related campaign and your site looks like a great fit.
+
+Would you be open to this? If so, what would your pricing look like?
+
+Looking forward to connecting!
+
+Best,
+Paul</textarea></div>
+    <div class="m-actions">
+      <button class="btn" onclick="closeOv('ov-tmpl')">Cancel</button>
+      <button class="btn primary" onclick="saveTmpl()">Save & Version</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+const DB = {
+  contacts: [
+    {id:1,  name:"Poker Reviews HQ",    email:"editor@pokerreviewshq.com",    domain:"pokerreviewshq.com",    da:52, stage:"outreach",   status:"unsent",  askPrice:null, agreedPrice:null, links:[], history:[
+      {from:"paul",text:"Hi Marcus,\n\nHope you're having a great week!\n\nMy name is Paul, and I'm reaching out to ask if you'd be open to a link insertion on pokerreviewshq.com. We're working on a casino-related campaign and your site looks like a fantastic fit.\n\nWould you be open to this? If so, what would your pricing look like?\n\nLooking forward to connecting!\n\nBest,\nPaul",time:"Today 08:44",ai:true,stage:"outreach"}
+    ]},
+    {id:2,  name:"Casino Guide Pro",    email:"admin@casinoguidepro.net",     domain:"casinoguidepro.net",    da:61, stage:"outreach",   status:"sent",    askPrice:null, agreedPrice:null, links:[], history:[
+      {from:"paul",text:"Hi James,\n\nI hope this message finds you well!\n\nI'm Paul — I came across casinoguidepro.net and really liked the depth of your content. I'd love to discuss a link insertion opportunity with you.\n\nAre you open to it? And if so, could you share your pricing?\n\nBest,\nPaul",time:"Yesterday 09:12",ai:true,stage:"outreach"}
+    ]},
+    {id:3,  name:"BettingZone Daily",   email:"links@bettingzonedaily.com",   domain:"bettingzonedaily.com",  da:57, stage:"follow",    status:"no-reply",askPrice:null, agreedPrice:null, links:[], history:[
+      {from:"paul",text:"Hi Sarah,\n\nReaching out about a link insertion opportunity for bettingzonedaily.com. Would you be open?\n\nBest, Paul",time:"3 days ago",ai:true,stage:"outreach"},
+      {from:"paul",text:"Hi Sarah,\n\nJust following up on my earlier note — wanted to make sure it didn't get lost in your inbox!\n\nWould love to connect about a potential link placement. Even a quick yes or no would be super helpful.\n\nCheers,\nPaul",time:"1 day ago",ai:true,stage:"follow"}
+    ]},
+    {id:4,  name:"BetMaster Authority", email:"deals@betmasterauth.com",      domain:"betmasterauth.com",     da:72, stage:"nego",      status:"active",  askPrice:320,  agreedPrice:null, links:[], history:[
+      {from:"paul",text:"Hi David,\n\nHope all is well! Paul here — I'd love to explore a link insertion on betmasterauth.com for a casino campaign we're running.\n\nAre you open to it? What would your pricing be?\n\nBest, Paul",time:"5 days ago",ai:true,stage:"outreach"},
+      {from:"them",text:"Hi Paul,\n\nYes, we're open to link insertions. Our standard rate is $320 per placement.\n\nLet me know if that works for you.",time:"4 days ago",ai:false},
+      {from:"paul",text:"Hi David,\n\nThanks so much for the quick reply — really appreciate it!\n\nI'd love to move forward. However, our campaign budget is a bit tighter this cycle. Would you be able to do $192? That's 40% off your standard rate, and I can promise consistent future business from our side.\n\nWhat do you think?\n\nBest,\nPaul",time:"4 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"Hi Paul, $192 is a bit too low for us. We could stretch to $270 at the very most.",time:"3 days ago",ai:false},
+      {from:"paul",text:"Hi David,\n\nI really appreciate you working with us on this!\n\nHow about we meet in the middle at $240? I think that's a fair deal that works for both sides, and I'd love to get this moving.\n\nLooking forward to your thoughts!\n\nBest,\nPaul",time:"2 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"$240 is getting there but we'd prefer $255. Can you do that?",time:"1 day ago",ai:false}
+    ]},
+    {id:5,  name:"Luck & Strategy HQ",  email:"partnerships@luckstrategy.io",  domain:"luckstrategy.io",     da:65, stage:"approved",   status:"agreed",  askPrice:250,  agreedPrice:200, links:["https://luckstrategy.io/best-casinos-2024","https://luckstrategy.io/casino-reviews"], history:[
+      {from:"paul",text:"Hi Nina,\n\nPaul here! I came across luckstrategy.io and I think it'd be a great fit for a casino link insertion we're working on.\n\nAre you open to it? Happy to discuss pricing too.\n\nBest, Paul",time:"6 days ago",ai:true,stage:"outreach"},
+      {from:"them",text:"Hi Paul! Yes, we accept link insertions. Our price is $250 per placement.",time:"5 days ago",ai:false},
+      {from:"paul",text:"Hi Nina,\n\nWonderful to hear from you! We're very interested.\n\nWould you be able to do $150? That's 40% off — we're building a long-term partner network and can bring repeat placements your way.\n\nBest, Paul",time:"5 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"We can go as low as $210. That's our floor.",time:"4 days ago",ai:false},
+      {from:"paul",text:"Hi Nina,\n\nI appreciate you meeting us partway! How about $200 even? That's 20% off your original rate — clean number, easy to process.\n\nDoes that work?\n\nBest, Paul",time:"3 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"Alright Paul, $200 works for us. Let's move forward! Please share the link you'd like inserted.",time:"2 days ago",ai:false},
+      {from:"paul",text:"Hi Nina,\n\nExcellent — so glad we could make this work! 🎉\n\nI've confirmed internally. Our finance team will be reaching out shortly with invoice details.\n\nThe placement links are:\n• https://bestcasinos.com/top-picks\n• https://bestcasinos.com/bonuses\n\nPlease insert them naturally within existing articles. Let me know once live!\n\nLooking forward to a long working relationship.\n\nBest,\nPaul",time:"1 day ago",ai:true,stage:"approved"}
+    ]},
+    {id:6,  name:"HighRoller Magazine", email:"billing@highrollermagazine.com",domain:"highrollermagazine.com", da:78, stage:"finance",  status:"invoiced",askPrice:400,  agreedPrice:280, links:["https://highrollermagazine.com/casino-guide","https://highrollermagazine.com/slot-reviews"], history:[
+      {from:"paul",text:"Hi Rachel,\n\nPaul here — reaching out about a link insertion on highrollermagazine.com. Are you open?\n\nBest, Paul",time:"10 days ago",ai:true,stage:"outreach"},
+      {from:"them",text:"Hi Paul, yes we accept insertions. $400 is our rate.",time:"9 days ago",ai:false},
+      {from:"paul",text:"Hi Rachel, thanks! Would $240 work? That's 40% off. Best, Paul",time:"9 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"That's too low. $320 is the lowest we'd go.",time:"8 days ago",ai:false},
+      {from:"paul",text:"Hi Rachel, how about $280? 30% off — a solid deal. Paul",time:"8 days ago",ai:true,stage:"nego"},
+      {from:"them",text:"$280 works. Deal!",time:"7 days ago",ai:false},
+      {from:"paul",text:"Perfect Rachel! Finance will be in touch. Thanks, Paul",time:"7 days ago",ai:true,stage:"approved"}
+    ]}
+  ],
+  templates: [
+    {id:1,name:"First Outreach",tag:"outreach",versions:[
+      {ver:"v3",date:"Today",subj:"Quick question about your site — Paul",body:"Hi {{name}},\n\nHope you're having a great week!\n\nMy name is Paul, and I'm reaching out to ask if you'd be open to a link insertion on {{domain}}. We're working on a casino-related campaign and your site looks like a great fit.\n\nWould you be open to this? If so, what would your pricing look like?\n\nLooking forward to connecting!\n\nBest,\nPaul"},
+      {ver:"v2",date:"3 days ago",subj:"Link insertion inquiry — Paul",body:"Hi {{name}},\n\nI'm Paul — I came across {{domain}} and would love to discuss a link insertion. Are you open?\n\nBest,\nPaul"},
+      {ver:"v1",date:"1 week ago",subj:"Collaboration opportunity",body:"Hi {{name}},\n\nWould you be open to a link insertion? Please share pricing.\n\nRegards, Paul"}
+    ]},
+    {id:2,name:"Follow Up",tag:"follow",versions:[
+      {ver:"v2",date:"2 days ago",subj:"Just following up, Paul here",body:"Hi {{name}},\n\nJust following up on my earlier note — wanted to make sure it didn't get lost!\n\nWould love to connect about a potential link placement on {{domain}}.\n\nCheers,\nPaul"},
+      {ver:"v1",date:"5 days ago",subj:"Re: Link insertion",body:"Hi {{name}}, checking in on my last message.\n\nPaul"}
+    ]},
+    {id:3,name:"Price Request",tag:"nego",versions:[
+      {ver:"v1",date:"4 days ago",subj:"Re: Link placement pricing",body:"Hi {{name}},\n\nThanks for confirming! Could you share your pricing for a link insertion on {{domain}}?\n\nBest, Paul"}
+    ]},
+    {id:4,name:"Negotiation",tag:"nego",versions:[
+      {ver:"v2",date:"2 days ago",subj:"Re: Link Insertion — Pricing",body:"Hi {{name}},\n\nThanks for sharing your rate of ${{ask_price}}!\n\nWould you consider ${{offer_price}}? That's 40% off and I can promise repeat business from our side.\n\nBest,\nPaul"},
+      {ver:"v1",date:"1 week ago",subj:"Re: Pricing",body:"Hi {{name}}, could you do 40% off? Thanks, Paul"}
+    ]},
+    {id:5,name:"Deal Confirmed",tag:"approved",versions:[
+      {ver:"v1",date:"5 days ago",subj:"Deal confirmed — Paul",body:"Hi {{name}},\n\nWonderful! Confirmed at ${{agreed_price}}.\n\nFinance will reach out with invoice details shortly.\n\nPlease insert the links naturally: {{links}}\n\nThanks so much!\n\nBest,\nPaul"}
+    ]}
+  ]
+};
+
+// ─ state ─
+let tab='paul', activeContactId=DB.contacts.find(c=>c.stage==='nego')?.id||DB.contacts[0].id;
+let activeTmplId=1, activeInboxId=DB.contacts[0].id, activeLinksSearch='';
+let finTarget=null;
+
+// ─ computed lists ─
+const by=stage=>DB.contacts.filter(c=>c.stage===stage);
+const unsent=()=>DB.contacts.filter(c=>c.stage==='outreach'&&c.status==='unsent');
+const sent=()=>DB.contacts.filter(c=>c.stage==='outreach'&&c.status==='sent');
+const noReply=()=>DB.contacts.filter(c=>c.stage==='follow');
+const negoList=()=>DB.contacts.filter(c=>c.stage==='nego');
+const apprList=()=>DB.contacts.filter(c=>['approved','finance'].includes(c.stage));
+const withLinks=()=>DB.contacts.filter(c=>c.links&&c.links.length>0);
+const unreadCount=()=>DB.contacts.filter(c=>c.history.some(h=>h.from==='them'&&!h.read)).length;
+
+function updateBadges(){
+  document.getElementById('b-paul').textContent = DB.contacts.length;
+  document.getElementById('b-new').textContent  = unsent().length;
+  document.getElementById('b-follow').textContent = noReply().length;
+  document.getElementById('b-nego').textContent = negoList().length;
+  document.getElementById('b-appr').textContent = apprList().length;
+  document.getElementById('b-links').textContent = withLinks().length;
+  document.getElementById('b-inbox').textContent = unreadCount();
+}
+
+const META={
+  paul:    {title:"Paul's Workflow",       desc:"Full AI pipeline · outreach → negotiate → approve → finance · links tracked",  btn:"Run Paul"},
+  new:     {title:"Send to New Email",     desc:"Auto-detected from Google Sheets · unsent only · spam-safe delay",              btn:"Send Bulk"},
+  follow:  {title:"Send Follow Up",        desc:"No reply in 2+ days · Paul uses different template · randomised send times",    btn:"Send Follow-Ups"},
+  nego:    {title:"Under Negotiation",     desc:"Paul acting as human · 40% → 20% negotiation · auto-accepts ≥20% off",         btn:"View Activity"},
+  appr:    {title:"Approved Deals",        desc:"Deal closed by Paul · Sheets updated · finance & link insertion tracked",       btn:"Export Finance"},
+  links:   {title:"Link Tracker",          desc:"Insertion links per approved website · written to Google Sheets row",            btn:"Add Links"},
+  inbox:   {title:"Inbox Monitor",         desc:"Full conversation history · Paul's messages flagged · sentiment analysis",      btn:"Mark All Read"},
+  tmpl:    {title:"Paul's Templates",      desc:"Versioned email templates · Paul personalises per contact",                     btn:"New Template"},
+};
+
+function go(t,el){
+  tab=t;
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const m=META[t];
+  document.getElementById('page-title').textContent=m.title;
+  document.getElementById('page-desc').textContent=m.desc;
+  document.getElementById('main-btn').textContent=m.btn;
+  render(t);
+}
+
+function handleMain(){
+  const acts={
+    paul:'Paul is running — all automation active!',
+    new:'Bulk outreach queued with spam-safe delays',
+    follow:'Follow-ups queued — different templates selected',
+    nego:'Paul is auto-negotiating all active threads',
+    appr:'Finance export prepared',
+    links:'Opening link input…',
+    inbox:'All messages marked as read',
+    tmpl:'New template draft created',
+  };
+  if(tab==='inbox') DB.contacts.forEach(c=>c.history.forEach(h=>h.read=true));
+  updateBadges();
+  toast(acts[tab]);
+  if(tab==='tmpl') openTmplModal();
+}
+
+// ════════════ RENDER ════════════
+function render(t){
+  const c=document.getElementById('content');
+  c.className='content fade';
+  if(t==='paul')   renderPaul(c);
+  else if(t==='new')    renderNew(c);
+  else if(t==='follow') renderFollow(c);
+  else if(t==='nego')   renderNegoTab(c);
+  else if(t==='appr')   renderAppr(c);
+  else if(t==='links')  renderLinks(c);
+  else if(t==='inbox')  renderInbox(c);
+  else if(t==='tmpl')   renderTmpl(c);
+}
+
+// ── PAUL'S WORKFLOW ──
+const STAGES=['outreach','follow','nego','approved','finance'];
+const STAGE_LABELS={'outreach':'Outreach','follow':'Follow Up','nego':'Negotiating','approved':'Approved','finance':'Finance'};
+const STAGE_COL={'outreach':'var(--new)','follow':'var(--follow)','nego':'var(--nego)','approved':'var(--appr)','finance':'var(--paul)'};
+
+function renderPaul(c){
+  const ac=DB.contacts.find(x=>x.id===activeContactId)||DB.contacts[0];
+  c.innerHTML=`<div class="paul-layout">
+  <!-- pipeline steps -->
+  <div class="paul-pipeline">
+    ${STAGES.map((s,i)=>`
+    <div class="pp-step${tab==='paul'&&activeContactId&&DB.contacts.find(x=>x.id===activeContactId)?.stage===s?' active':''}" onclick="filterPaulStage('${s}')">
+      <div class="pp-ico" style="background:${s===ac.stage?STAGE_COL[s]+'22':'var(--b0)'};border-color:${s===ac.stage?STAGE_COL[s]:'var(--b0)'}">
+        ${{outreach:'✉',follow:'↩',nego:'⚖',approved:'✓',finance:'$'}[s]}
+      </div>
+      <div class="pp-label" style="color:${s===ac.stage?STAGE_COL[s]:'var(--dim)'}">${STAGE_LABELS[s]}</div>
+    </div>
+    ${i<STAGES.length-1?'<div class="pp-connector"></div>':''}`).join('')}
+  </div>
+
+  <div class="paul-detail" style="display:flex;overflow:hidden;flex:1">
+  <!-- contact list -->
+  <div class="paul-contacts">
+    <div style="padding:10px 12px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);border-bottom:1px solid var(--b0)">All Contacts (${DB.contacts.length})</div>
+    ${DB.contacts.map(r=>`
+    <div class="pc-item${r.id===activeContactId?' active':''}" onclick="activeContactId=${r.id};renderPaul(document.getElementById('content'))">
+      <div class="pc-name">${r.name}</div>
+      <div class="pc-domain">${r.domain}</div>
+      <div class="pc-stage">
+        <span class="pill" style="background:${STAGE_COL[r.stage]}18;color:${STAGE_COL[r.stage]};font-size:9px;padding:1px 6px">${STAGE_LABELS[r.stage]}</span>
+        ${r.agreedPrice?`<span class="pill" style="background:var(--appr2);color:var(--appr);font-size:9px;padding:1px 6px">$${r.agreedPrice}</span>`:''}
+        ${r.links&&r.links.length?`<span class="pill" style="background:var(--link2);color:var(--link);font-size:9px;padding:1px 6px">⛓ ${r.links.length}</span>`:''}
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <!-- main detail -->
+  <div class="paul-main">
+    <!-- stage bar -->
+    <div class="stage-bar">
+      ${STAGES.map((s,i)=>{
+        const idx=STAGES.indexOf(ac.stage);
+        const cls=i<idx?'done':i===idx?'curr':'';
+        return (i>0?'<span class="stg-arrow">›</span>':'')+`<div class="stg ${cls}" style="${cls==='curr'?'border-bottom-color:'+STAGE_COL[s]+';color:var(--tx)':''}">${STAGE_LABELS[s]}</div>`;
+      }).join('')}
+    </div>
+    <!-- thread header -->
+    <div class="paul-thread">
+      <h2>${ac.name} <span style="font-size:10px;font-weight:400;color:var(--sub)">— ${ac.domain}</span></h2>
+      <p>${ac.email}</p>
+      <div class="paul-meta">
+        <span class="pill" style="background:${STAGE_COL[ac.stage]}18;color:${STAGE_COL[ac.stage]}">${STAGE_LABELS[ac.stage]}</span>
+        <span class="pill" style="background:var(--b0);color:var(--sub)">DA ${ac.da}</span>
+        ${ac.askPrice?`<span class="pill" style="background:var(--b0);color:var(--sub)">Ask: $${ac.askPrice}</span>`:''}
+        ${ac.agreedPrice?`<span class="pill" style="background:var(--appr2);color:var(--appr)">✓ Agreed: $${ac.agreedPrice} (${Math.round((1-ac.agreedPrice/ac.askPrice)*100)}% off)</span>`:''}
+      </div>
+    </div>
+    <!-- messages -->
+    <div class="messages">
+      ${ac.history.map(m=>`
+      <div class="msg ${m.from==='paul'?'paul':'them'}">
+        <div class="msg-who">
+          ${m.from==='paul'?`<span class="paul-badge">Paul · AI</span>`:'Prospect'}
+          · ${m.time}
+          ${m.stage?`<span style="font-size:8px;font-family:'DM Mono',monospace;color:var(--dim)">[${m.stage}]</span>`:''}
+        </div>
+        <div class="msg-bbl">${m.text}</div>
+        ${m.from==='paul'?`<div class="paul-sig"><span class="paul-sig-dot"></span>sent by Paul — AI acting as human</div>`:''}
+      </div>`).join('')}
+      ${!ac.history.length?`<div style="text-align:center;color:var(--sub);font-family:'DM Mono',monospace;font-size:11px;padding:30px">No messages yet</div>`:''}
+    </div>
+  </div>
+
+  <!-- right panel -->
+  <div class="paul-rpanel">
+    <div class="rp-title">⚡ Deal Progress</div>
+    ${ac.agreedPrice?`
+    <div class="agreed-box">
+      <div class="agreed-amt">$${ac.agreedPrice}</div>
+      <div class="agreed-lbl">✓ Paul agreed · ${Math.round((1-ac.agreedPrice/ac.askPrice)*100)}% off</div>
+    </div>`:''}
+    ${ac.askPrice?`
+    <div class="rp-card">
+      <div class="rp-label">Price Timeline</div>
+      <div class="price-line"><span class="price-from" style="background:var(--b0);color:var(--sub)">ask</span><span>$${ac.askPrice}</span></div>
+      ${ac.history.filter(m=>m.from==='paul'&&m.text.match(/\$(\d+)/)).map((m,i)=>{
+        const p=m.text.match(/\$(\d+)/)[1];
+        return `<div class="price-line"><span class="price-from" style="background:var(--paul2);color:var(--paul)">paul</span><span style="color:var(--paul)">$${p}</span><span style="font-size:9px;color:var(--dim);margin-left:auto">${Math.round((1-p/ac.askPrice)*100)}% off</span></div>`;
+      }).join('')}
+      ${ac.history.filter(m=>m.from==='them'&&m.text.match(/\$(\d+)/)).map(m=>{
+        const p=m.text.match(/\$(\d+)/)[1];
+        return `<div class="price-line"><span class="price-from" style="background:var(--follow2);color:var(--follow)">them</span><span style="color:var(--follow)">$${p}</span></div>`;
+      }).join('')}
+      ${ac.agreedPrice?`<div class="price-line" style="border-top:1px solid var(--b1);margin-top:3px;padding-top:6px"><span class="price-from" style="background:var(--appr2);color:var(--appr)">✓ final</span><strong style="color:var(--appr)">$${ac.agreedPrice}</strong></div>`:''}
+    </div>`:''}
+
+    <div class="rp-title" style="margin-top:10px">⛓ Inserted Links</div>
+    <div id="link-area-${ac.id}">
+      ${ac.links.map(l=>`<div class="link-saved">🔗 <a href="${l}" target="_blank" style="color:var(--link);text-decoration:none;font-size:10px;word-break:break-all">${l}</a></div>`).join('')}
+    </div>
+    <div class="link-input-wrap">
+      <input class="link-input" id="linkin-${ac.id}" placeholder="Paste insertion URL…"/>
+      <button class="btn sm" style="color:var(--link);border-color:rgba(244,114,182,.3)" onclick="addLink(${ac.id})">+ Add Link</button>
+    </div>
+
+    <div class="rp-title" style="margin-top:10px">🤖 Paul Actions</div>
+    ${ac.stage==='nego'?`
+    <button class="act-btn" onclick="paulCounter(${ac.id})">↩ Send counter-offer</button>
+    <button class="act-btn" onclick="paulAccept(${ac.id})">✓ Accept — move to approved</button>
+    <button class="act-btn" onclick="pausePaul(${ac.id})">⏸ Pause Paul</button>`:''}
+    ${ac.stage==='outreach'&&ac.status==='unsent'?`<button class="act-btn" onclick="paulSend(${ac.id})">▶ Send outreach</button>`:''}
+    ${ac.stage==='follow'?`<button class="act-btn" onclick="paulFollowUp(${ac.id})">↩ Send follow-up</button>`:''}
+    ${ac.stage==='approved'?`<button class="act-btn" style="color:var(--paul);border-color:rgba(110,231,183,.3)" onclick="openFinance(${ac.id})">💰 Send to Finance</button>`:''}
+    ${ac.stage==='finance'?`<span class="pill" style="background:var(--appr2);color:var(--appr);font-size:10px;padding:4px 10px">✓ Invoice sent</span>`:''}
+    <button class="act-btn danger" onclick="toast('Thread closed — marked no deal')">✕ No deal</button>
+  </div>
+  </div>
+  </div>`;
+}
+
+// ── NEW EMAIL ──
+function renderNew(c){
+  const u=unsent(), s=sent();
+  c.innerHTML=`
+  <div class="stats-row">
+    <div class="sc sn"><div class="sl2">Unsent</div><div class="sv" style="color:var(--new)">${u.length}</div><div class="ss2">from Sheets</div></div>
+    <div class="sc sn"><div class="sl2">Sent</div><div class="sv" style="color:var(--sub)">${s.length}</div><div class="ss2">protected</div></div>
+    <div class="sc sf"><div class="sl2">Follow-up</div><div class="sv" style="color:var(--follow)">${noReply().length}</div><div class="ss2">no reply</div></div>
+    <div class="sc sa"><div class="sl2">Approved</div><div class="sv" style="color:var(--appr)">${apprList().length}</div><div class="ss2">deals closed</div></div>
+  </div>
+  <div class="sw">
+    <div class="sec-hd"><div class="sec-ttl"><span class="dot" style="background:var(--new)"></span>New Email List — Unsent Only</div>
+    <div style="display:flex;gap:8px"><input class="si" placeholder="Search…" oninput="searchNew(this.value)"/><button class="btn sm primary" onclick="bulkSend()">Paul Sends All (${u.length})</button></div></div>
+    <div class="filters" id="new-filters">
+      ${['all','unsent','sent'].map(f=>`<button class="fb${f==='all'?' on':''}" onclick="filterNew('${f}',this)">${f}</button>`).join('')}
+      <div style="margin-left:auto;font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)">⚠ Sent contacts protected from re-outreach</div>
+    </div>
+    <div class="tbl-box"><table><thead><tr>
+      <th>#</th><th>Website</th><th>Email</th><th>DA</th><th>Status</th><th>Action</th>
+    </tr></thead><tbody id="new-tbody">
+    ${DB.contacts.filter(r=>r.stage==='outreach').map((r,i)=>`<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--sub);font-size:10px">${String(i+1).padStart(2,'0')}</td>
+      <td><div style="font-weight:800;font-size:12.5px">${r.name}</div><div style="font-size:10px;color:var(--sub);font-family:'DM Mono',monospace">${r.domain}</div></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">${r.email}</td>
+      <td><span class="pill" style="background:var(--new2);color:var(--new)">DA ${r.da}</span></td>
+      <td>${r.status==='sent'?`<span class="pill" style="background:rgba(99,102,241,.1);color:#818cf8">✓ Sent</span>`:`<span class="pill" style="background:var(--new2);color:var(--new)">Unsent</span>`}</td>
+      <td style="display:flex;gap:5px">
+        ${r.status==='unsent'?`<button class="btn sm primary" onclick="paulSend(${r.id})">Paul Sends</button>`:`<button class="btn sm" disabled>Sent ✓</button>`}
+        <button class="btn sm" onclick="activeContactId=${r.id};go('paul',document.querySelector('.ni'))">View</button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+
+// ── FOLLOW UP ──
+function renderFollow(c){
+  c.innerHTML=`
+  <div class="stats-row">
+    <div class="sc sf"><div class="sl2">Awaiting follow-up</div><div class="sv" style="color:var(--follow)">${noReply().length}</div><div class="ss2">no reply 2+ days</div></div>
+    <div class="sc sf"><div class="sl2">Avg silent</div><div class="sv" style="color:var(--follow)">2.4d</div><div class="ss2">since outreach</div></div>
+    <div class="sc sg"><div class="sl2">Negotiating</div><div class="sv" style="color:var(--nego)">${negoList().length}</div><div class="ss2">active</div></div>
+    <div class="sc sa"><div class="sl2">Response rate</div><div class="sv" style="color:var(--appr)">42%</div><div class="ss2">from follow-ups</div></div>
+  </div>
+  <div class="sw">
+    <div class="sec-hd"><div class="sec-ttl"><span class="dot" style="background:var(--follow)"></span>Follow-Up Queue</div></div>
+    <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:11px;font-family:'DM Mono',monospace;color:var(--follow)">
+      ⚠ Paul uses a different follow-up template · sends with 30–90min random delay to avoid spam filters
+    </div>
+    <div class="tbl-box"><table><thead><tr>
+      <th>#</th><th>Website</th><th>Email</th><th>DA</th><th>Sent</th><th>Attempts</th><th>Paul's Action</th>
+    </tr></thead><tbody>
+    ${noReply().map((r,i)=>`<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--sub);font-size:10px">${String(i+1).padStart(2,'0')}</td>
+      <td><div style="font-weight:800;font-size:12.5px">${r.name}</div><div style="font-size:10px;color:var(--sub);font-family:'DM Mono',monospace">${r.domain}</div></td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sub)">${r.email}</td>
+      <td><span class="pill" style="background:var(--follow2);color:var(--follow)">DA ${r.da}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sub)">${r.history.slice(-1)[0]?.time||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--follow)">${r.history.filter(h=>h.from==='paul').length}×</td>
+      <td style="display:flex;gap:5px">
+        <button class="btn sm primary" onclick="paulFollowUp(${r.id})">Paul Follows Up</button>
+        <button class="btn sm" onclick="activeContactId=${r.id};go('paul',document.querySelector('.ni'))">View</button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+
+// ── NEGOTIATION TAB ──
+function renderNegoTab(c){
+  c.innerHTML=`
+  <div class="stats-row">
+    <div class="sc sg"><div class="sl2">Active</div><div class="sv" style="color:var(--nego)">${negoList().length}</div><div class="ss2">Paul negotiating</div></div>
+    <div class="sc sg"><div class="sl2">Avg ask</div><div class="sv" style="color:var(--nego)">$${negoList().length?Math.round(negoList().reduce((a,r)=>a+(r.askPrice||0),0)/negoList().length):0}</div><div class="ss2">listed rate</div></div>
+    <div class="sc sp"><div class="sl2">Target range</div><div class="sv" style="color:var(--paul)">20–40%</div><div class="ss2">discount off ask</div></div>
+    <div class="sc sa"><div class="sl2">Agreed</div><div class="sv" style="color:var(--appr)">${apprList().length}</div><div class="ss2">deals closed</div></div>
+  </div>
+  <div class="sw">
+    <div class="sec-hd">
+      <div class="sec-ttl"><span class="dot" style="background:var(--nego)"></span>Paul — Live Negotiation Threads</div>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)">Paul auto-accepts ≥20% off · never reveals AI identity</span>
+    </div>
+    <div class="tbl-box"><table><thead><tr>
+      <th>#</th><th>Website</th><th>Ask</th><th>Paul's Offer</th><th>Their Counter</th><th>Rounds</th><th>Status</th><th>Action</th>
+    </tr></thead><tbody>
+    ${negoList().map((r,i)=>{
+      const paulOffers=r.history.filter(m=>m.from==='paul'&&m.stage==='nego'&&m.text.match(/\$(\d+)/));
+      const theirCounters=r.history.filter(m=>m.from==='them'&&m.text.match(/\$(\d+)/));
+      const latestPaul=paulOffers.slice(-1)[0]?.text.match(/\$(\d+)/)?.[1]||'-';
+      const latestThem=theirCounters.slice(-1)[0]?.text.match(/\$(\d+)/)?.[1]||'-';
+      const disc=latestPaul!=='-'&&r.askPrice?Math.round((1-latestPaul/r.askPrice)*100):0;
+      return `<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--sub);font-size:10px">${String(i+1).padStart(2,'0')}</td>
+      <td><div style="font-weight:800;font-size:12.5px">${r.name}</div><div style="font-size:10px;color:var(--sub);font-family:'DM Mono',monospace">${r.domain}</div></td>
+      <td style="font-family:'DM Mono',monospace">$${r.askPrice||'-'}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--nego);font-weight:700">$${latestPaul} <span style="font-size:9px;color:var(--sub)">(${disc}% off)</span></td>
+      <td style="font-family:'DM Mono',monospace;color:var(--follow)">$${latestThem}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px">${paulOffers.length}</td>
+      <td><span class="pill" style="background:var(--nego2);color:var(--nego)">Paul active</span></td>
+      <td style="display:flex;gap:5px">
+        <button class="btn sm" style="color:var(--appr);border-color:rgba(52,211,153,.3)" onclick="paulAccept(${r.id})">Approve</button>
+        <button class="btn sm" onclick="activeContactId=${r.id};go('paul',document.querySelector('.ni'))">Thread</button>
+      </td>
+    </tr>`;
+    }).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+
+// ── APPROVED ──
+function renderAppr(c){
+  const list=apprList();
+  const saved=list.reduce((a,r)=>a+(r.askPrice-r.agreedPrice),0);
+  c.innerHTML=`
+  <div class="stats-row">
+    <div class="sc sa"><div class="sl2">Deals closed</div><div class="sv" style="color:var(--appr)">${list.length}</div><div class="ss2">by Paul</div></div>
+    <div class="sc sa"><div class="sl2">Total agreed</div><div class="sv" style="color:var(--appr)">$${list.reduce((a,r)=>a+(r.agreedPrice||0),0)}</div><div class="ss2">after negotiation</div></div>
+    <div class="sc sg"><div class="sl2">Total saved</div><div class="sv" style="color:var(--nego)">$${saved}</div><div class="ss2">vs. original ask</div></div>
+    <div class="sc sl"><div class="sl2">Links tracked</div><div class="sv" style="color:var(--link)">${list.reduce((a,r)=>a+(r.links?.length||0),0)}</div><div class="ss2">insertion URLs</div></div>
+  </div>
+  <div class="sw">
+    <div class="sec-hd"><div class="sec-ttl"><span class="dot" style="background:var(--appr)"></span>Approved — Sheets Updated · Finance · Links</div></div>
+    <div class="tbl-box"><table><thead><tr>
+      <th>#</th><th>Website</th><th>Original Ask</th><th>Paul Agreed</th><th>Saved</th><th>Links</th><th>Finance</th><th>Invoice</th>
+    </tr></thead><tbody>
+    ${list.map((r,i)=>`<tr>
+      <td style="font-family:'DM Mono',monospace;color:var(--sub);font-size:10px">${String(i+1).padStart(2,'0')}</td>
+      <td><div style="font-weight:800;font-size:12.5px">${r.name}</div><div style="font-size:10px;color:var(--sub);font-family:'DM Mono',monospace">${r.domain}</div></td>
+      <td style="font-family:'DM Mono',monospace;text-decoration:line-through;color:var(--sub)">$${r.askPrice}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:900;color:var(--appr)">$${r.agreedPrice}</td>
+      <td><span class="pill" style="background:var(--appr2);color:var(--appr)">${Math.round((1-r.agreedPrice/r.askPrice)*100)}% off</span></td>
+      <td>${r.links&&r.links.length?`<span class="pill" style="background:var(--link2);color:var(--link)">⛓ ${r.links.length} link${r.links.length>1?'s':''}</span>`:`<span class="pill" style="background:var(--b0);color:var(--sub)">none yet</span>`}</td>
+      <td>${r.stage==='finance'?`<span class="pill" style="background:var(--appr2);color:var(--appr)">✓ Sent</span>`:`<span class="pill" style="background:var(--follow2);color:var(--follow)">Pending</span>`}</td>
+      <td>${r.stage==='finance'?`<button class="btn sm" disabled>Done ✓</button>`:`<button class="btn sm" style="color:var(--paul);border-color:rgba(110,231,183,.3)" onclick="openFinance(${r.id})">Send to Finance</button>`}</td>
+    </tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+
+// ── LINK TRACKER ──
+function renderLinks(c){
+  const list=DB.contacts.filter(r=>['approved','finance'].includes(r.stage));
+  c.innerHTML=`<div class="lt-layout"><div class="lt-main">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <div class="sec-ttl"><span class="dot" style="background:var(--link)"></span>Link Tracker — Per Website Row</div>
+    <input class="si" style="margin-left:auto" placeholder="Search sites…" oninput="activeLinksSearch=this.value;renderLinks(document.getElementById('content'))"/>
+  </div>
+  <div style="background:var(--link2);border:1px solid rgba(244,114,182,.2);border-radius:8px;padding:9px 13px;margin-bottom:14px;font-size:11px;font-family:'DM Mono',monospace;color:var(--link)">
+    ⛓ Links added here are written back to the Google Sheets row for that website · tracked per placement
+  </div>
+  ${list.filter(r=>!activeLinksSearch||r.name.toLowerCase().includes(activeLinksSearch.toLowerCase())||r.domain.toLowerCase().includes(activeLinksSearch.toLowerCase())).map(r=>`
+  <div class="link-row">
+    <div class="lr-top">
+      <div>
+        <div class="lr-site">${r.name}</div>
+        <div class="lr-domain">${r.domain} · DA ${r.da} · Agreed $${r.agreedPrice}</div>
+      </div>
+      <span class="pill" style="background:var(--appr2);color:var(--appr);flex-shrink:0">${r.links.length} link${r.links.length!==1?'s':''}</span>
+    </div>
+    <div class="lr-links" id="lr-${r.id}">
+      ${r.links.length?r.links.map((l,li)=>`
+      <div class="lr-link">
+        <span style="color:var(--link);font-size:11px">⛓</span>
+        <a href="${l}" target="_blank">${l}</a>
+        <span class="lr-link-meta">Placement ${li+1}</span>
+        <button class="btn sm" style="color:var(--red);border-color:transparent;padding:2px 6px" onclick="removeLink(${r.id},${li})">✕</button>
+      </div>`).join(''):`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);padding:6px 0">No links added yet</div>`}
+    </div>
+    <div class="add-link-row">
+      <input class="add-link-input" id="li-${r.id}" placeholder="Paste insertion URL and press Add…"/>
+      <button class="btn sm" style="color:var(--link);border-color:rgba(244,114,182,.3);flex-shrink:0" onclick="addLink(${r.id})">+ Add</button>
+    </div>
+  </div>`).join('')}
+  ${!list.length?`<div style="text-align:center;color:var(--sub);font-family:'DM Mono',monospace;font-size:12px;padding:40px">No approved deals yet — links appear after Paul closes a deal</div>`:''}
+  </div></div>`;
+}
+
+// ── INBOX ──
+function renderInbox(c){
+  if(!activeInboxId) activeInboxId=DB.contacts[0].id;
+  const thread=DB.contacts.find(r=>r.id===activeInboxId)||DB.contacts[0];
+  thread.history.forEach(h=>{if(h.from==='them')h.read=true});
+  updateBadges();
+
+  const stCol={outreach:'var(--new)',follow:'var(--follow)',nego:'var(--nego)',approved:'var(--appr)',finance:'var(--paul)'};
+  const sentiment=thread.stage==='approved'||thread.stage==='finance'?94:thread.stage==='nego'?62:thread.stage==='follow'?38:50;
+  const sentColor=sentiment>75?'var(--appr)':sentiment>50?'var(--follow)':'var(--red)';
+  const paulMsgs=thread.history.filter(m=>m.from==='paul').length;
+  const theirMsgs=thread.history.filter(m=>m.from==='them').length;
+
+  c.innerHTML=`<div class="inbox-layout">
+  <div class="inbox-list">
+    ${DB.contacts.map(r=>{
+      const unr=r.history.some(h=>h.from==='them'&&!h.read);
+      return `<div class="it${r.id===activeInboxId?' active':''}${unr?' unread':''}" onclick="activeInboxId=${r.id};renderInbox(document.getElementById('content'))">
+        ${unr?`<span class="unread-dot"></span>`:''}
+        <div class="it-name" style="${unr?'padding-left:12px':''}">${r.name}</div>
+        <div class="it-sub">${r.history.slice(-1)[0]?.text?.split('\n')[0]?.slice(0,45)||'No messages'}…</div>
+        <div class="it-time">${r.history.slice(-1)[0]?.time||''}</div>
+        <div class="it-tags">
+          <span class="pill" style="background:${stCol[r.stage]}18;color:${stCol[r.stage]};font-size:9px;padding:1px 6px">${STAGE_LABELS[r.stage]}</span>
+          <span style="font-size:9px;font-family:'DM Mono',monospace;color:var(--dim)">${r.history.length} msgs</span>
+          ${r.agreedPrice?`<span class="pill" style="background:var(--appr2);color:var(--appr);font-size:9px;padding:1px 5px">$${r.agreedPrice}</span>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="inbox-view">
+    <div class="inbox-hd">
+      <h2>${thread.name}</h2>
+      <p>${thread.email} · ${thread.domain}</p>
+      <div class="inbox-meta">
+        <span class="pill" style="background:${stCol[thread.stage]}18;color:${stCol[thread.stage]}">${STAGE_LABELS[thread.stage]}</span>
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--sub)">${thread.history.length} messages</span>
+        ${thread.agreedPrice?`<span class="pill" style="background:var(--appr2);color:var(--appr)">✓ Agreed $${thread.agreedPrice}</span>`:''}
+      </div>
+    </div>
+    <div class="messages">
+      ${thread.history.map(m=>`
+      <div class="msg ${m.from==='paul'?'paul':'them'}">
+        <div class="msg-who">
+          ${m.from==='paul'?`<span class="paul-badge">Paul · AI</span>`:'Prospect'}
+          · ${m.time}
+        </div>
+        <div class="msg-bbl">${m.text}</div>
+        ${m.from==='paul'?`<div class="paul-sig"><span class="paul-sig-dot"></span>sent by Paul — AI acting as human</div>`:''}
+      </div>`).join('')}
+      ${!thread.history.length?`<div style="text-align:center;color:var(--sub);font-family:'DM Mono',monospace;font-size:11px;padding:30px">No conversation yet</div>`:''}
+    </div>
+  </div>
+
+  <div class="inbox-analysis">
+    <div class="ia-title">Conversation Analysis</div>
+    <div class="ia-card"><div class="ia-lbl">Sentiment</div>
+      <div style="font-size:13px;font-weight:800;color:${sentColor}">${sentiment>75?'Positive':sentiment>50?'Neutral':'Cold'}</div>
+      <div class="progress"><div class="pbar" style="width:${sentiment}%;background:${sentColor}"></div></div>
+      <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--sub);margin-top:4px">Score: ${sentiment}/100</div>
+    </div>
+    <div class="ia-card"><div class="ia-lbl">Thread Stats</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;display:flex;flex-direction:column;gap:5px;margin-top:3px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">Paul sent</span><strong style="color:var(--paul)">${paulMsgs}</strong></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">Prospect</span><strong>${theirMsgs}</strong></div>
+        ${thread.askPrice?`<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">Ask</span><strong>$${thread.askPrice}</strong></div>`:''}
+        ${thread.agreedPrice?`<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">Agreed</span><strong style="color:var(--appr)">$${thread.agreedPrice}</strong></div>`:''}
+      </div>
+    </div>
+    <div class="ia-card"><div class="ia-lbl">Paul Suggests</div>
+      ${thread.stage==='nego'?`<button class="act-btn" onclick="paulAccept(${thread.id});renderInbox(document.getElementById('content'))">✓ Accept this deal</button>`:''}
+      ${thread.stage==='approved'?`<button class="act-btn" onclick="openFinance(${thread.id})" style="color:var(--paul)">💰 Send to Finance</button>`:''}
+      <button class="act-btn" onclick="toast('Summary copied!')">Copy deal summary</button>
+      <button class="act-btn" onclick="toast('Exporting thread…')">Export thread PDF</button>
+    </div>
+  </div>
+  </div>`;
+}
+
+// ── TEMPLATES ──
+function renderTmpl(c){
+  const tmpl=DB.templates.find(t=>t.id===activeTmplId)||DB.templates[0];
+  const latest=tmpl.versions[0];
+  const tagC={outreach:'var(--new)',follow:'var(--follow)',nego:'var(--nego)',approved:'var(--appr)'};
+  c.innerHTML=`<div class="tmpl-layout">
+  <div class="tmpl-list">
+    <div style="padding:8px 8px 5px;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--sub)">Paul's Templates</div>
+    ${DB.templates.map(t=>`
+    <div class="tl-item${t.id===activeTmplId?' active':''}" onclick="activeTmplId=${t.id};renderTmpl(document.getElementById('content'))">
+      <div class="tl-name">${t.name}</div>
+      <div class="tl-meta">${t.versions.length} ver · ${t.versions[0].date}</div>
+      <div class="tl-tag" style="background:${tagC[t.tag]||'var(--sub)'}18;color:${tagC[t.tag]||'var(--sub)'}">${t.tag}</div>
+    </div>`).join('')}
+    <div style="padding:6px"><button class="btn sm" style="width:100%" onclick="toast('New template created!')">+ New Template</button></div>
+  </div>
+  <div class="tmpl-edit">
+    <div class="tmpl-edit-hd">
+      <div style="font-size:14px;font-weight:900">${tmpl.name} <span style="font-size:11px;font-weight:400;color:var(--sub)">${latest.ver}</span></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn sm" onclick="toast('Test email sent from Paul!')">Test Send</button>
+        <button class="btn sm primary" onclick="saveTmplVer(${tmpl.id})">Save Version</button>
+      </div>
+    </div>
+    <div class="fe"><label>Subject</label><input class="fi" id="te-s" value="${latest.subj}"/></div>
+    <div class="fe" style="flex:1;display:flex;flex-direction:column">
+      <label>Body — {{name}} {{domain}} {{ask_price}} {{offer_price}} {{agreed_price}} {{links}}</label>
+      <textarea class="ta" id="te-b">${latest.body}</textarea>
+    </div>
+    <div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--sub);margin-bottom:7px">Version History</div>
+      ${tmpl.versions.map(v=>`
+      <div class="hist-item" onclick="loadVer(${tmpl.id},'${v.ver}')">
+        <div class="hi-v">${v.ver} · ${v.date}</div>
+        <div class="hi-p">${v.subj}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+  </div>`;
+}
+
+// ════════════ ACTIONS ════════════
+function paulSend(id){
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  r.status='sent';
+  toast(`Paul sent outreach to ${r.name}`);
+  updateBadges(); render(tab);
+}
+
+function bulkSend(){
+  const u=unsent();
+  u.forEach(r=>r.status='sent');
+  toast(`Paul queued ${u.length} outreach emails — spam-safe delays active`);
+  updateBadges(); render(tab);
+}
+
+function paulFollowUp(id){
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  r.history.push({from:'paul',text:`Hi ${r.name.split(' ')[0]},\n\nJust a quick follow-up on my earlier message — would love to connect about a link insertion on ${r.domain}!\n\nBest,\nPaul`,time:'Just now',ai:true,stage:'follow'});
+  toast(`Paul sent follow-up to ${r.name}`);
+  updateBadges(); render(tab);
+}
+
+function paulCounter(id){
+  const r=DB.contacts.find(x=>x.id===id); if(!r||!r.askPrice)return;
+  const lastOffer=r.history.filter(m=>m.from==='paul'&&m.text.match(/\$(\d+)/)).slice(-1)[0]?.text.match(/\$(\d+)/)?.[1]||r.askPrice*0.6;
+  const newOffer=Math.round(Number(lastOffer)*0.95);
+  r.history.push({from:'paul',text:`Hi there,\n\nThank you so much for your counter! We really want to make this work.\n\nHow about $${newOffer}? That's our best offer — and I can promise this will be the start of a longer relationship.\n\nBest,\nPaul`,time:'Just now',ai:true,stage:'nego'});
+  toast(`Paul sent counter-offer of $${newOffer}`);
+  updateBadges(); render(tab);
+}
+
+function paulAccept(id){
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  // Find their last counter or use latest paul offer
+  const theirLast=r.history.filter(m=>m.from==='them'&&m.text.match(/\$(\d+)/)).slice(-1)[0]?.text.match(/\$(\d+)/)?.[1];
+  const ourLast=r.history.filter(m=>m.from==='paul'&&m.text.match(/\$(\d+)/)).slice(-1)[0]?.text.match(/\$(\d+)/)?.[1];
+  const agreedPrice=Number(theirLast||ourLast||r.askPrice);
+  const disc=Math.round((1-agreedPrice/r.askPrice)*100);
+  if(disc<20){toast(`⚠ Discount only ${disc}% — Paul needs ≥20% to accept. Counter again.`);return;}
+  r.agreedPrice=agreedPrice;
+  r.stage='approved';
+  r.history.push({from:'paul',text:`Hi,\n\nWonderful — we have a deal at $${agreedPrice}! 🎉\n\nI'm so glad we could make this work. Our finance team will be in touch shortly with invoice details.\n\nPlease watch for the insertion links — I'll confirm everything once live.\n\nThank you for working with me on this!\n\nBest,\nPaul`,time:'Just now',ai:true,stage:'approved'});
+  toast(`✓ Paul agreed $${agreedPrice} (${disc}% off) — moved to Approved!`);
+  updateBadges(); render(tab);
+}
+
+function pausePaul(id){toast('Paul paused on this thread — manual mode active');}
+
+function addLink(id){
+  const inp=document.getElementById('linkin-'+id)||document.getElementById('li-'+id);
+  if(!inp||!inp.value.trim())return;
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  r.links.push(inp.value.trim());
+  inp.value='';
+  toast('Link saved — written to Google Sheets row!');
+  updateBadges(); render(tab);
+}
+
+function removeLink(id,li){
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  r.links.splice(li,1);
+  toast('Link removed');
+  updateBadges(); render(tab);
+}
+
+function openFinance(id){
+  finTarget=id;
+  const r=DB.contacts.find(x=>x.id===id); if(!r)return;
+  document.getElementById('fm-n').value=r.name;
+  document.getElementById('fm-d').value=r.domain;
+  document.getElementById('fm-o').value='$'+r.askPrice;
+  document.getElementById('fm-a').value='$'+r.agreedPrice+' (Paul negotiated '+Math.round((1-r.agreedPrice/r.askPrice)*100)+'% off)';
+  document.getElementById('fm-l').value=r.links.join(', ')||'No links added yet';
+  document.getElementById('fm-nt').value=`Paul closed this deal on ${r.name} (${r.domain}).\nAsk: $${r.askPrice} → Agreed: $${r.agreedPrice} (${Math.round((1-r.agreedPrice/r.askPrice)*100)}% off).\nPlease process the invoice for $${r.agreedPrice}.`;
+  document.getElementById('ov-finance').classList.add('show');
+}
+
+function confirmFinance(){
+  if(finTarget){
+    const r=DB.contacts.find(x=>x.id===finTarget);
+    if(r){r.stage='finance';}
+  }
+  closeOv('ov-finance');
+  toast('Invoice sent to finance team!');
+  updateBadges(); render(tab);
+}
+
+function filterPaulStage(stage){
+  const r=DB.contacts.find(c=>c.stage===stage);
+  if(r){activeContactId=r.id;render('paul');}
+  else toast(`No contacts in ${stage} stage yet`);
+}
+
+function openTmplModal(){document.getElementById('ov-tmpl').classList.add('show');}
+function saveTmpl(){closeOv('ov-tmpl');toast('Template saved and versioned by Paul!');}
+function closeOv(id){document.getElementById(id).classList.remove('show');}
+
+function saveTmplVer(id){
+  const t=DB.templates.find(x=>x.id===id); if(!t)return;
+  const s=document.getElementById('te-s')?.value||t.versions[0].subj;
+  const b=document.getElementById('te-b')?.value||t.versions[0].body;
+  t.versions.unshift({ver:'v'+(t.versions.length+1),date:'Just now',subj:s,body:b});
+  renderTmpl(document.getElementById('content'));
+  toast('New version saved!');
+}
+
+function loadVer(id,ver){
+  const t=DB.templates.find(x=>x.id===id);
+  const v=t?.versions.find(x=>x.ver===ver); if(!v)return;
+  const se=document.getElementById('te-s'), be=document.getElementById('te-b');
+  if(se)se.value=v.subj; if(be)be.value=v.body;
+  toast(`Loaded ${ver}`);
+}
+
+function doSync(){
+  document.getElementById('sync-lbl').textContent='Syncing…';
+  setTimeout(()=>{
+    document.getElementById('sync-lbl').textContent='Synced · Google Sheets';
+    document.getElementById('sync-t').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    toast('✓ Google Sheets synced — Paul checking for new rows…');
+    updateBadges(); render(tab);
+  },1400);
+}
+
+function searchNew(q){}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ════════ INIT ════════
+updateBadges();
+render('paul');
+document.getElementById('sync-t').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+</script>
+</body>
+</html>
