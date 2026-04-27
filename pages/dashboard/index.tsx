@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { mockContacts } from '@/lib/mockData';
 import { Contact, DashboardStats } from '@/components/dashboard/types';
 import { Sidebar } from '@/components/dashboard/Sidebar';
@@ -10,6 +10,7 @@ import { ContactTable } from '@/components/dashboard/ContactTable';
 
 export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>(mockContacts);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Calculate stats
   const stats: DashboardStats = useMemo(() => {
@@ -71,10 +72,34 @@ export default function DashboardPage() {
     alert('Outreach would start here (not yet wired to API)');
   };
 
-  const handleRefresh = () => {
-    console.log('Refresh clicked');
-    // In future: fetch from /api/contacts
+  const syncContactsFromSheet = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/sync-sheets');
+      const data = await response.json();
+
+      if (data.contacts && data.contacts.length > 0) {
+        setContacts(data.contacts);
+        console.log(`✓ Synced ${data.contacts.length} contacts from Google Sheet`);
+      } else if (response.ok) {
+        console.warn('No contacts found in Sheet, using mock data');
+      } else {
+        console.error('Sync error:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to sync from Sheet:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleRefresh = () => {
+    syncContactsFromSheet();
+  };
+
+  useEffect(() => {
+    syncContactsFromSheet();
+  }, []);
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
@@ -84,7 +109,7 @@ export default function DashboardPage() {
       {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <TopBar onStartOutreach={handleStartOutreach} onRefresh={handleRefresh} />
+        <TopBar onStartOutreach={handleStartOutreach} onRefresh={handleRefresh} isLoading={isLoading} />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
