@@ -17,13 +17,13 @@ export async function sendOutreach(
 
   try {
     const gmail = buildGmailClient(sender)
-    messageId = await sendWithClient(gmail, contact.email1, subject, body, sender.email)
+    messageId = await sendWithClient(gmail, contact.email, subject, body, sender.email)
   } catch (err: any) {
     // Log failure
     await client.from('outreach_logs').insert([{
       sender_id: sender.id,
       contact_domain: contact.domain,
-      contact_email: contact.email1,
+      contact_email: contact.email,
       subject,
       status: 'failed',
       error: err.message,
@@ -61,7 +61,7 @@ export async function sendOutreach(
   await client.from('outreach_logs').insert([{
     sender_id: sender.id,
     contact_domain: contact.domain,
-    contact_email: contact.email1,
+    contact_email: contact.email,
     subject,
     status: 'sent',
   }])
@@ -78,7 +78,7 @@ export async function sendOutreach(
   if (sheetId) {
     try {
       const rowIndex = parseInt(contact.id, 10) - 1
-      await updateContactInSheet(sheetId, rowIndex, { emailAccount: sender.email }, sheetTab)
+      await updateContactInSheet(sheetId, rowIndex, { senderEmail: sender.email }, sheetTab)
     } catch (sheetErr) {
       console.warn('Could not write sender to Sheet (non-fatal):', sheetErr)
     }
