@@ -7,14 +7,14 @@ interface ContactTableProps {
   contacts: Contact[];
   onUpdateContact: (contact: Contact) => void;
   onDeleteContact: (contactId: string) => void;
-  onQualify?: (contactId: string, score: any) => void;
+  stage?: string;
 }
 
 export function ContactTable({
   contacts,
   onUpdateContact,
   onDeleteContact,
-  onQualify,
+  stage = 'all',
 }: ContactTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -27,34 +27,37 @@ export function ContactTable({
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-      <table className="w-full">
+    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-x-auto">
+      <table className="w-full min-w-max">
         <thead>
           <tr className="bg-slate-900/50 border-b border-slate-700">
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Domain
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Niche
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Status
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Primary Email
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Standard Price
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Gambling Price
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Date Confirmed
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">
-              Qualification
-            </th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Domain</th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">DR</th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Niche</th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Email</th>
+            {stage === 'send-followup' && (
+              <>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Outreach Date</th>
+              </>
+            )}
+            {stage !== 'start-outreach' && stage !== 'send-followup' && (
+              <>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Website</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">TAT</th>
+                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Link Type</th>
+                {stage === 'negotiated' && (
+                  <>
+                    <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Notes</th>
+                    <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Content Guideline</th>
+                  </>
+                )}
+              </>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-700">
@@ -68,7 +71,7 @@ export function ContactTable({
                     expandedId === contact.id ? null : contact.id
                   )
                 }
-                onQualify={onQualify}
+                stage={stage}
               />
               {expandedId === contact.id && (
                 <ExpandedRowDetail
@@ -78,6 +81,7 @@ export function ContactTable({
                     onDeleteContact(contact.id);
                     setExpandedId(null);
                   }}
+                  colSpan={stage === 'start-outreach' ? 4 : stage === 'send-followup' ? 7 : stage === 'negotiated' ? 12 : 10}
                 />
               )}
             </React.Fragment>

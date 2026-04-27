@@ -1,31 +1,42 @@
 import { google } from 'googleapis'
-import type { Contact } from '@/components/dashboard/types'
+import type { Contact, PipelineStatus } from '@/components/dashboard/types'
+
+// Column indices (0-based) for the new sheet structure:
+// 0:Name  1:DR  2:Global Traffic  3:Top Country Traffic  4:TCT Traffic
+// 5:Regional Traffic  6:Market  7:Major Niche  8:Micro Niche  9:Language
+// 10:Email 1  11:Name 1  12:Email 2  13:Name 2  14:Email 3  15:Name 3
+// 16:Campaign  17:Status  18:QA Failed Reason  19:Email Account
+// 20:Original Currency  21:Original Standard Cost  22:Original Gambling Cost
+// 23:Original Betting Cost  24:Original Standard Link Insertion Cost
+// 25:Original Gambling Link Insertion Cost  26:Accept Casino  27:Accept Betting
+// 28:Link Insert  29:Sponsored  30:Link Term  31:Date Confirmed
+// 32:Notes  33:Content Guidelines  34:Standard Cost  35:Gambling Cost
+// 36:Betting Cost  37:Standard Price  38:Gambling Price  39:Betting Price
+// 40:Standard Link Insert Cost in euro  41:Gambling Link insert Cost in euro
+
+const COL = {
+  NAME: 0,
+  DR: 1,
+  MAJOR_NICHE: 7,
+  EMAIL_1: 10,
+  NAME_1: 11,
+  STATUS: 17,
+  LINK_TERM: 30,
+  DATE_CONFIRMED: 31,
+  NOTES: 32,
+  CONTENT_GUIDELINES: 33,
+  STANDARD_COST: 34,
+} as const
 
 let sheetsClient: any = null
 
 function getSheetsClient() {
   if (!sheetsClient) {
-    const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    let key = process.env.GOOGLE_PRIVATE_KEY
-
-    if (!email || !key) {
-      throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_PRIVATE_KEY')
-    }
-
-    // Handle escaped newlines in the private key
-    if (key.includes('\\n')) {
-      key = key.replace(/\\n/g, '\n')
-    }
+    const path = require('path')
+    const keyFilePath = path.join(process.cwd(), 'google-creds.json')
 
     const auth = new google.auth.GoogleAuth({
-      credentials: {
-        type: 'service_account',
-        project_id: process.env.GOOGLE_CLOUD_PROJECT || '',
-        private_key_id: '',
-        private_key: key,
-        client_email: email,
-        client_id: '',
-      } as any,
+      keyFilename: keyFilePath,
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     })
 
@@ -34,73 +45,96 @@ function getSheetsClient() {
   return sheetsClient
 }
 
-export async function fetchContactsFromSheet(sheetId: string, tabName: string = 'Sheet1'): Promise<Contact[]> {
-  if (!sheetId) {
-    throw new Error('Sheet ID is required')
+const mapStatus = (raw: string): PipelineStatus => {
+  const status = raw?.toLowerCase().trim() || ''
+  const statusMap: Record<string, PipelineStatus> = {
+    'pending': 'start_outreach',
+    'info collected': 'start_outreach',
+    'qa fail': 'start_outreach',
+    'qa failed': 'start_outreach',
+    'sent 1st': 'outreach_sent',
+    'sent 2nd': 'send_followup',
+    'follow_up': 'send_followup',
+    'follow up': 'send_followup',
+    'confirmed': 'response_received',
+    'responded': 'response_received',
+    'negotiation': 'under_negotiation',
+    'under negotiation': 'under_negotiation',
+    'negotiated': 'negotiated',
+    'approved': 'approved',
+    'no_deal': 'start_outreach',
+    'no deal': 'start_outreach',
+    'payment sent': 'payment_sent',
+    'live': 'live',
   }
+  return statusMap[status] || 'start_outreach'
+}
+
+export async function fetchContactsFromSheet(sheetId: string, tabName: string = 'Sheet1'): Promise<Contact[]> {
+  if (!sheetId) throw new Error('Sheet ID is required')
 
   try {
     const sheets = getSheetsClient()
 
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: `${tabName}!A:S`,
-    })
+    const metadata = await sheets.spreadsheets.get({ spreadsheetId: sheetId })
+    const availableSheets = metadata.data.sheets || []
+    const sheetNames = availableSheets.map((s: any) => s.properties.title)
+    console.log('Available sheets:', sheetNames)
 
-    const rows = response.data.values || []
-
-    if (rows.length === 0) {
-      return []
+    let actualTabName = tabName
+    if (!sheetNames.includes(tabName)) {
+      console.log(`Sheet "${tabName}" not found. Available: ${sheetNames.join(', ')}`)
+      if (sheetNames.length > 0) {
+        actualTabName = sheetNames[0]
+        console.log(`Using first sheet: "${actualTabName}"`)
+      } else {
+        throw new Error('No sheets found in spreadsheet')
+      }
     }
 
-    const headers = rows[0]
-    const dataRows = rows.slice(1)
-
-    const contacts: Contact[] = dataRows.map((row: any[], index: number) => {
-      const parseValue = (val: any): any => {
-        if (!val || val === '') return undefined
-        if (val === 'TRUE') return true
-        if (val === 'FALSE') return false
-        if (!isNaN(val) && val !== '') return Number(val)
-        return val
-      }
-
-      // Map columns to your exact Sheet structure
-      // 0: Domain, 1: Niche, 2: Price from Backlinker - In Euro, 3: Email 1, 4: Name,
-      // 5: Email 2, 6: Name, 7: Email 3, 8: Name, 9: Status, 10: Email Account, 11: Currency,
-      // 12: Standard Price, 13: Gambling Price, 14: Negotiated Price (Gambling),
-      // 15: Accept Casino, 16: Accept Betting, 17: Sponsored, 18: Link Term, 19: Date Confirmed,
-      // 20: Notes, 21: Content Guidelines, 22: Reply
-
-      return {
-        id: String(index + 2), // Row 2 onwards (row 1 is header)
-        domain: row[0]?.trim() || '',
-        niche: row[1]?.trim() || '',
-        priceFromBacklinker: parseValue(row[2]) || 0,
-        email1: row[3]?.trim() || '',
-        name1: row[4]?.trim() || '',
-        email2: row[5]?.trim() || undefined,
-        name2: row[6]?.trim() || undefined,
-        email3: row[7]?.trim() || undefined,
-        name3: row[8]?.trim() || undefined,
-        status: (row[9]?.toLowerCase() || 'pending') as any,
-        emailAccount: row[10]?.trim() || '',
-        currency: row[11]?.trim() || 'EUR',
-        standardPrice: parseValue(row[12]) || 0,
-        gamblingPrice: parseValue(row[13]) || 0,
-        negotiatedPrice: parseValue(row[14]) || undefined,
-        acceptCasino: parseValue(row[15]) || false,
-        acceptBetting: parseValue(row[16]) || false,
-        sponsored: parseValue(row[17]) || false,
-        linkTerm: row[18]?.trim() || '',
-        dateConfirmed: row[19]?.trim() || undefined,
-        notes: row[20]?.trim() || '',
-        contentGuidelines: row[21]?.trim() || '',
-        reply: (row[22]?.toLowerCase() || 'pending') as any,
-        qualificationScore: undefined,
-        qualificationCategory: undefined,
-      }
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${actualTabName}'!A:AP`,
     })
+
+    const rows: any[][] = response.data.values || []
+    if (rows.length === 0) return []
+
+    const dataRows = rows.slice(1) // skip header row
+
+    const contacts: Contact[] = dataRows
+      .filter((row) => row[COL.NAME]?.trim())
+      .map((row: any[], index: number) => {
+        const str = (i: number) => row[i]?.toString().trim() || ''
+        const num = (i: number) => {
+          const v = row[i]
+          if (!v || v === '') return undefined
+          const n = Number(v)
+          return isNaN(n) ? undefined : n
+        }
+
+        return {
+          id: String(index + 2),
+          domain: str(COL.NAME),
+          website: '',
+          dr: num(COL.DR),
+          niche: str(COL.MAJOR_NICHE),
+          contact: str(COL.NAME_1),
+          email: str(COL.EMAIL_1),
+          status: mapStatus(str(COL.STATUS)),
+          price: num(COL.STANDARD_COST),
+          tat: undefined,
+          linkType: str(COL.LINK_TERM),
+          publishDate: str(COL.DATE_CONFIRMED) || undefined,
+          liveUrl: undefined,
+          notes: str(COL.NOTES),
+          contentGuideline: str(COL.CONTENT_GUIDELINES) || undefined,
+          outreachDate: undefined,
+          followupDate: undefined,
+          responseDate: undefined,
+          paymentStatus: undefined,
+        }
+      })
 
     return contacts
   } catch (error: any) {
@@ -118,64 +152,35 @@ export async function updateContactInSheet(
   try {
     const sheets = getSheetsClient()
 
-    // Map Contact fields back to column positions
-    const columnUpdates: { [key: number]: any } = {}
+    // Build a sparse update: only send columns that changed
+    const colUpdates: Record<number, any> = {}
 
-    // Only update fields that exist in the Sheet
-    if (updates.status !== undefined) columnUpdates[9] = updates.status
-    if (updates.standardPrice !== undefined) columnUpdates[12] = updates.standardPrice
-    if (updates.gamblingPrice !== undefined) columnUpdates[13] = updates.gamblingPrice
-    if (updates.negotiatedPrice !== undefined) columnUpdates[14] = updates.negotiatedPrice
-    if (updates.notes !== undefined) columnUpdates[20] = updates.notes
-    if (updates.dateConfirmed !== undefined) columnUpdates[19] = updates.dateConfirmed
-    if (updates.reply !== undefined) columnUpdates[22] = updates.reply
-    if (updates.acceptCasino !== undefined) columnUpdates[15] = updates.acceptCasino
-    if (updates.acceptBetting !== undefined) columnUpdates[16] = updates.acceptBetting
+    if (updates.niche !== undefined)            colUpdates[COL.MAJOR_NICHE] = updates.niche
+    if (updates.email !== undefined)            colUpdates[COL.EMAIL_1] = updates.email
+    if (updates.contact !== undefined)          colUpdates[COL.NAME_1] = updates.contact
+    if (updates.status !== undefined)           colUpdates[COL.STATUS] = updates.status
+    if (updates.linkType !== undefined)         colUpdates[COL.LINK_TERM] = updates.linkType
+    if (updates.publishDate !== undefined)      colUpdates[COL.DATE_CONFIRMED] = updates.publishDate
+    if (updates.notes !== undefined)            colUpdates[COL.NOTES] = updates.notes
+    if (updates.contentGuideline !== undefined) colUpdates[COL.CONTENT_GUIDELINES] = updates.contentGuideline
+    if (updates.price !== undefined)            colUpdates[COL.STANDARD_COST] = updates.price
 
-    // Build the range and values for update
-    const values: any[][] = []
-    for (let i = 0; i <= 22; i++) {
-      if (columnUpdates[i] !== undefined) {
-        values.push([columnUpdates[i]])
-      }
+    if (Object.keys(colUpdates).length === 0) return
+
+    // Build full row array (42 cols, A:AP), leaving unchanged cells as null
+    const TOTAL_COLS = 42
+    const rowValues: (any)[] = Array(TOTAL_COLS).fill(null)
+    for (const [col, val] of Object.entries(colUpdates)) {
+      rowValues[Number(col)] = val ?? ''
     }
 
-    if (values.length === 0) return // Nothing to update
-
-    // Update the row (rowIndex is 1-based, row 2 is index 1 in the sheet, etc)
-    const range = `${tabName}!A${rowIndex + 1}:W${rowIndex + 1}`
+    const range = `${tabName}!A${rowIndex + 1}:AP${rowIndex + 1}`
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
       range,
       valueInputOption: 'RAW',
-      requestBody: {
-        values: [[
-          undefined, // A: Domain (don't update)
-          undefined, // B: Niche
-          undefined, // C: Price from Backlinker
-          undefined, // D: Email 1
-          undefined, // E: Name
-          undefined, // F: Email 2
-          undefined, // G: Name
-          undefined, // H: Email 3
-          undefined, // I: Name
-          columnUpdates[9], // J: Status
-          undefined, // K: Email Account
-          undefined, // L: Currency
-          columnUpdates[12], // M: Standard Price
-          columnUpdates[13], // N: Gambling Price
-          columnUpdates[14], // O: Negotiated Price
-          columnUpdates[15], // P: Accept Casino
-          columnUpdates[16], // Q: Accept Betting
-          undefined, // R: Sponsored
-          undefined, // S: Link Term
-          columnUpdates[19], // T: Date Confirmed
-          columnUpdates[20], // U: Notes
-          undefined, // V: Content Guidelines
-          columnUpdates[22], // W: Reply
-        ]],
-      },
+      requestBody: { values: [rowValues] },
     })
 
     console.log(`✓ Updated row ${rowIndex + 1} in Sheet`)

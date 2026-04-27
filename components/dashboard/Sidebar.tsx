@@ -1,23 +1,44 @@
+import {
+  LayoutGrid,
+  Mail,
+  SendHorizontal,
+  Reply,
+  MessageSquare,
+  Scale,
+  Handshake,
+  CheckCircle,
+  CreditCard,
+  Globe,
+  Link,
+  Inbox,
+  FileText,
+} from 'lucide-react';
+import { NavCounts } from './types';
+
 interface SidebarProps {
-  navCounts: {
-    domains: number;
-    pending: number;
-    confirmed: number;
-  };
+  navCounts: NavCounts;
+  selectedStage?: string;
+  onSelectStage?: (stage: string) => void;
 }
 
-export function Sidebar({ navCounts }: SidebarProps) {
+export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage }: SidebarProps) {
   const pipelineItems = [
-    { label: 'Start Outreach', count: navCounts.pending, icon: '📧' },
-    { label: 'Send Followup', count: 1, icon: '↩️' },
-    { label: 'Under Negotiation', count: 1, icon: '⚖️' },
-    { label: 'Approved', count: navCounts.confirmed, icon: '✅' },
+    { id: 'all', label: 'All Contacts', count: navCounts.all, icon: LayoutGrid },
+    { id: 'start-outreach', label: 'Start Outreach', count: navCounts.startOutreach, icon: Mail },
+    { id: 'outreach-sent', label: 'Outreach Sent', count: navCounts.outreachSent, icon: SendHorizontal },
+    { id: 'send-followup', label: 'Send Follow-up', count: navCounts.sendFollowup, icon: Reply },
+    { id: 'response-received', label: 'Response Received', count: navCounts.responseReceived, icon: MessageSquare },
+    { id: 'under-negotiation', label: 'Under Negotiation', count: navCounts.underNegotiation, icon: Scale },
+    { id: 'negotiated', label: 'Negotiated', count: navCounts.negotiated, icon: Handshake },
+    { id: 'approved', label: 'Approved', count: navCounts.approved, icon: CheckCircle },
+    { id: 'payment-sent', label: 'Payment Sent', count: navCounts.paymentSent, icon: CreditCard },
+    { id: 'live', label: 'Live', count: navCounts.live, icon: Globe },
   ];
 
   const toolsItems = [
-    { label: 'Link Tracker', count: 2, icon: '🔗' },
-    { label: 'Inbox Monitor', count: 3, icon: '📨' },
-    { label: 'Outreach Templates', count: 5, icon: '📋' },
+    { label: 'Link Tracker', count: 2, icon: Link },
+    { label: 'Inbox Monitor', count: 3, icon: Inbox },
+    { label: 'Outreach Templates', count: 5, icon: FileText },
   ];
 
   return (
@@ -25,7 +46,7 @@ export function Sidebar({ navCounts }: SidebarProps) {
       {/* Header */}
       <div className="px-4 py-3">
         <div className="text-xs font-mono uppercase tracking-widest text-slate-500 mb-2">
-          🚀 AI Outreach
+          AI Outreach
         </div>
         <h1 className="text-3xl font-black text-slate-100 tracking-tight">
           Link<span className="text-emerald-400">Ops</span>
@@ -57,19 +78,26 @@ export function Sidebar({ navCounts }: SidebarProps) {
           </h3>
           <div className="space-y-1">
             {pipelineItems.map((item) => (
-              <a
-                key={item.label}
-                href="#"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+              <button
+                key={item.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onSelectStage?.(item.id);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedStage === item.id
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                }`}
               >
-                <span className="text-base">{item.icon}</span>
-                <span className="flex-1">{item.label}</span>
+                <item.icon size={16} className="flex-shrink-0" />
+                <span className="flex-1 text-left">{item.label}</span>
                 {item.count > 0 && (
                   <span className="font-mono text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
                     {item.count}
                   </span>
                 )}
-              </a>
+              </button>
             ))}
           </div>
         </div>
@@ -86,7 +114,7 @@ export function Sidebar({ navCounts }: SidebarProps) {
                 href="#"
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
               >
-                <span className="text-base">{item.icon}</span>
+                <item.icon size={16} className="flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
                 {item.count > 0 && (
                   <span className="font-mono text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
