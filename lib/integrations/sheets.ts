@@ -6,10 +6,15 @@ let sheetsClient: any = null
 function getSheetsClient() {
   if (!sheetsClient) {
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const key = process.env.GOOGLE_PRIVATE_KEY
+    let key = process.env.GOOGLE_PRIVATE_KEY
 
     if (!email || !key) {
       throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_PRIVATE_KEY')
+    }
+
+    // Handle escaped newlines in the private key
+    if (key.includes('\\n')) {
+      key = key.replace(/\\n/g, '\n')
     }
 
     const auth = new google.auth.GoogleAuth({
@@ -21,7 +26,7 @@ function getSheetsClient() {
         client_email: email,
         client_id: '',
       } as any,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     })
 
     sheetsClient = google.sheets({ version: 'v4', auth })
@@ -101,5 +106,81 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
   } catch (error: any) {
     console.error('Error fetching contacts from Google Sheet:', error)
     throw new Error(`Failed to fetch from Sheet: ${error.message}`)
+  }
+}
+
+export async function updateContactInSheet(
+  sheetId: string,
+  rowIndex: number,
+  updates: Partial<Contact>,
+  tabName: string = 'Sheet1'
+): Promise<void> {
+  try {
+    const sheets = getSheetsClient()
+
+    // Map Contact fields back to column positions
+    const columnUpdates: { [key: number]: any } = {}
+
+    // Only update fields that exist in the Sheet
+    if (updates.status !== undefined) columnUpdates[9] = updates.status
+    if (updates.standardPrice !== undefined) columnUpdates[12] = updates.standardPrice
+    if (updates.gamblingPrice !== undefined) columnUpdates[13] = updates.gamblingPrice
+    if (updates.negotiatedPrice !== undefined) columnUpdates[14] = updates.negotiatedPrice
+    if (updates.notes !== undefined) columnUpdates[20] = updates.notes
+    if (updates.dateConfirmed !== undefined) columnUpdates[19] = updates.dateConfirmed
+    if (updates.reply !== undefined) columnUpdates[22] = updates.reply
+    if (updates.acceptCasino !== undefined) columnUpdates[15] = updates.acceptCasino
+    if (updates.acceptBetting !== undefined) columnUpdates[16] = updates.acceptBetting
+
+    // Build the range and values for update
+    const values: any[][] = []
+    for (let i = 0; i <= 22; i++) {
+      if (columnUpdates[i] !== undefined) {
+        values.push([columnUpdates[i]])
+      }
+    }
+
+    if (values.length === 0) return // Nothing to update
+
+    // Update the row (rowIndex is 1-based, row 2 is index 1 in the sheet, etc)
+    const range = `${tabName}!A${rowIndex + 1}:W${rowIndex + 1}`
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          undefined, // A: Domain (don't update)
+          undefined, // B: Niche
+          undefined, // C: Price from Backlinker
+          undefined, // D: Email 1
+          undefined, // E: Name
+          undefined, // F: Email 2
+          undefined, // G: Name
+          undefined, // H: Email 3
+          undefined, // I: Name
+          columnUpdates[9], // J: Status
+          undefined, // K: Email Account
+          undefined, // L: Currency
+          columnUpdates[12], // M: Standard Price
+          columnUpdates[13], // N: Gambling Price
+          columnUpdates[14], // O: Negotiated Price
+          columnUpdates[15], // P: Accept Casino
+          columnUpdates[16], // Q: Accept Betting
+          undefined, // R: Sponsored
+          undefined, // S: Link Term
+          columnUpdates[19], // T: Date Confirmed
+          columnUpdates[20], // U: Notes
+          undefined, // V: Content Guidelines
+          columnUpdates[22], // W: Reply
+        ]],
+      },
+    })
+
+    console.log(`✓ Updated row ${rowIndex + 1} in Sheet`)
+  } catch (error: any) {
+    console.error('Error updating contact in Sheet:', error)
+    throw new Error(`Failed to update Sheet: ${error.message}`)
   }
 }
