@@ -29,6 +29,7 @@ export interface Contact {
   followupDate?: string;
   responseDate?: string;
   paymentStatus?: 'unpaid' | 'invoiced' | 'paid';
+  senderEmail?: string;
 }
 
 export interface DashboardMetrics {

@@ -21,6 +21,7 @@ const COL = {
   EMAIL_1: 10,
   NAME_1: 11,
   STATUS: 17,
+  EMAIL_ACCOUNT: 19,
   LINK_TERM: 30,
   DATE_CONFIRMED: 31,
   NOTES: 32,
@@ -129,6 +130,7 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
           liveUrl: undefined,
           notes: str(COL.NOTES),
           contentGuideline: str(COL.CONTENT_GUIDELINES) || undefined,
+          senderEmail: str(COL.EMAIL_ACCOUNT) || undefined,
           outreachDate: undefined,
           followupDate: undefined,
           responseDate: undefined,
@@ -164,6 +166,7 @@ export async function updateContactInSheet(
     if (updates.notes !== undefined)            colUpdates[COL.NOTES] = updates.notes
     if (updates.contentGuideline !== undefined) colUpdates[COL.CONTENT_GUIDELINES] = updates.contentGuideline
     if (updates.price !== undefined)            colUpdates[COL.STANDARD_COST] = updates.price
+    if (updates.senderEmail !== undefined)      colUpdates[COL.EMAIL_ACCOUNT] = updates.senderEmail
 
     if (Object.keys(colUpdates).length === 0) return
 
