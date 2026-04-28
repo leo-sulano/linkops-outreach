@@ -122,24 +122,30 @@ export default function DashboardPage() {
 
   const syncContactsFromSheet = async () => {
     setIsLoading(true);
+    setSyncError(null);
     try {
       const response = await fetch('/api/sync-sheets', {
         headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_SECRET_KEY || '' },
       });
       const data = await response.json();
 
+      if (!response.ok) {
+        const msg = data.error || `Server error (${response.status})`;
+        console.error('Sync error:', msg);
+        setSyncError(`Sync failed: ${msg}`);
+        return;
+      }
+
       if (data.contacts && data.contacts.length > 0) {
-        setSyncError(null);
         setContacts(data.contacts);
         console.log(`✓ Synced ${data.contacts.length} contacts from Google Sheet`);
-      } else if (response.ok) {
-        console.warn('No contacts found in Sheet, using mock data');
       } else {
-        console.error('Sync error:', data.error);
+        setContacts([]);
+        console.warn('Sheet returned 0 contacts');
       }
     } catch (error) {
       console.error('Failed to sync from Sheet:', error);
-      setSyncError('Failed to load contacts. Check your Google Sheet connection.');
+      setSyncError('Failed to reach server. Check your connection.');
     } finally {
       setIsLoading(false);
     }
