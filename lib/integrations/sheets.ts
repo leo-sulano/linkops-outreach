@@ -45,11 +45,15 @@ let sheetsClient: any = null
 
 function getSheetsClient() {
   if (!sheetsClient) {
-    const credsJson = process.env.GOOGLE_CREDENTIALS_JSON
-    if (!credsJson) throw new Error('GOOGLE_CREDENTIALS_JSON env var is not set')
+    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY
+    if (!clientEmail || !privateKey) throw new Error('GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY env vars are required')
 
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(credsJson),
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey.replace(/\\n/g, '\n'),
+      },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     })
 
