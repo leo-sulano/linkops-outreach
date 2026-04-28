@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchContactsFromSheet } from '@/lib/integrations/sheets'
-import { upsertContactsFromSheet } from '@/lib/integrations/supabase'
+import { upsertSheetContacts } from '@/lib/integrations/supabase'
 import { requireApiKey } from '@/lib/api-auth'
 import { throttle } from '@/lib/rate-limit'
 
@@ -20,26 +20,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1'
 
     if (!sheetId) {
-      console.warn('GOOGLE_SHEET_ID not configured, returning empty contacts')
-      return res.status(200).json({ contacts: [], warning: 'Sheet ID not configured' })
+      return res.status(500).json({ error: 'GOOGLE_SHEET_ID not configured' })
     }
 
+    // 1. Fetch latest from Google Sheet
     const contacts = await fetchContactsFromSheet(sheetId, sheetTab)
 
-    // Persist to Supabase (non-fatal — dashboard still loads from sheet data)
+    // 2. Upsert all into Supabase sheet_contacts (await so data is fresh before dashboard reads)
     if (contacts.length > 0) {
-      upsertContactsFromSheet(contacts).then(({ upserted, errors }) => {
-        if (errors > 0) console.warn(`Supabase upsert: ${upserted} ok, ${errors} failed`)
-        else console.log(`✓ Upserted ${upserted} contacts to Supabase`)
-      }).catch(err => console.error('Supabase upsert failed:', err.message))
+      await upsertSheetContacts(contacts)
+      console.log(`✓ Upserted ${contacts.length} contacts to Supabase`)
     }
 
-    return res.status(200).json({ contacts })
+    // 3. Return the fresh contacts directly — dashboard updates immediately
+    return res.status(200).json({ contacts, synced: contacts.length })
   } catch (error: any) {
     console.error('Sync sheets endpoint error:', error)
     return res.status(500).json({
       error: error.message || 'Failed to sync contacts from Google Sheet',
-      contacts: [],
     })
   }
 }

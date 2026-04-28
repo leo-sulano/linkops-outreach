@@ -276,6 +276,46 @@ export async function upsertContactsFromSheet(contacts: import('@/components/das
   return { upserted, errors }
 }
 
+type SheetContact = import('@/components/dashboard/types').Contact
+
+export async function upsertSheetContacts(contacts: SheetContact[]): Promise<void> {
+  if (contacts.length === 0) return
+  const client = getSupabaseClient()
+  const now = new Date().toISOString()
+  const rows = contacts.map(c => ({
+    domain:    c.domain,
+    row_index: parseInt(c.id, 10) || 0,
+    data:      c,
+    synced_at: now,
+  }))
+  const CHUNK = 100
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await client
+      .from('sheet_contacts')
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'domain' })
+    if (error) console.error('sheet_contacts upsert error:', error.message)
+  }
+}
+
+export async function getSheetContacts(): Promise<SheetContact[]> {
+  const client = getSupabaseClient()
+  const { data, error } = await client
+    .from('sheet_contacts')
+    .select('data')
+    .order('row_index', { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data || []).map((row: any) => row.data as SheetContact)
+}
+
+export async function updateSheetContact(domain: string, contact: SheetContact): Promise<void> {
+  const client = getSupabaseClient()
+  const { error } = await client
+    .from('sheet_contacts')
+    .update({ data: contact, synced_at: new Date().toISOString() })
+    .eq('domain', domain)
+  if (error) console.error('sheet_contacts update error:', error.message)
+}
+
 export async function createMetadata(
   contactId: string,
   data: Partial<ContactMetadata>

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { updateContactInSheet } from '@/lib/integrations/sheets'
+import { updateSheetContact } from '@/lib/integrations/supabase'
 import type { Contact } from '@/components/dashboard/types'
 import { requireApiKey } from '@/lib/api-auth'
 
@@ -24,13 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'GOOGLE_SHEET_ID not configured' })
     }
 
-    await updateContactInSheet(sheetId, rowIndex, contact, sheetTab)
+    // Write to Google Sheet and Supabase in parallel
+    await Promise.all([
+      updateContactInSheet(sheetId, rowIndex, contact, sheetTab),
+      updateSheetContact(contact.domain, contact),
+    ])
 
-    return res.status(200).json({ success: true, message: 'Contact saved to Sheet' })
+    return res.status(200).json({ success: true })
   } catch (error: any) {
-    console.error('Save contact endpoint error:', error)
-    return res.status(500).json({
-      error: error.message || 'Failed to save contact to Google Sheet',
-    })
+    console.error('Save contact error:', error)
+    return res.status(500).json({ error: error.message || 'Failed to save contact' })
   }
 }
