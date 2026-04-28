@@ -26,13 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 1. Fetch latest from Google Sheet
     const contacts = await fetchContactsFromSheet(sheetId, sheetTab)
 
-    // 2. Upsert all into Supabase sheet_contacts (await so data is fresh before dashboard reads)
+    // 2. Persist to Supabase in background — don't block the response
     if (contacts.length > 0) {
-      await upsertSheetContacts(contacts)
-      console.log(`✓ Upserted ${contacts.length} contacts to Supabase`)
+      upsertSheetContacts(contacts)
+        .then(() => console.log(`✓ Upserted ${contacts.length} contacts to Supabase`))
+        .catch(err => console.error('Supabase upsert failed:', err.message))
     }
 
-    // 3. Return the fresh contacts directly — dashboard updates immediately
+    // 3. Return fresh contacts immediately — no waiting for Supabase
     return res.status(200).json({ contacts, synced: contacts.length })
   } catch (error: any) {
     console.error('Sync sheets endpoint error:', error)
