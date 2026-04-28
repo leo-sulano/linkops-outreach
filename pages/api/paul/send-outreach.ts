@@ -3,6 +3,7 @@ import { fetchContactsFromSheet, updateContactInSheet } from '@/lib/integrations
 import { generateOutreachEmail } from '@/lib/claude'
 import { sendOutreach } from '@/lib/senders/send'
 import { requireApiKey } from '@/lib/api-auth'
+import { throttle } from '@/lib/rate-limit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,6 +11,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!requireApiKey(req, res)) return
+
+  if (!throttle('send-outreach', 30_000)) {
+    return res.status(429).json({ error: 'Too many requests — wait 30 seconds between batches' })
+  }
 
   const sheetId = process.env.GOOGLE_SHEET_ID
   const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1'

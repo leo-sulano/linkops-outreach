@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getSupabaseClient } from '@/lib/integrations/supabase'
 import { requireApiKey } from '@/lib/api-auth'
+import { encryptCredential } from '@/lib/crypto'
 
 const PUBLIC_COLUMNS = 'id, name, email, credential_type, daily_limit, timezone, status, last_error, last_used_at, created_at'
 
@@ -19,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (name !== undefined)            updates.name = name
     if (email !== undefined)           updates.email = email
     if (credential_type !== undefined) updates.credential_type = credential_type
-    if (credential_json !== undefined) updates.credential_json = credential_json
+    if (credential_json !== undefined) updates.credential_json = encryptCredential(credential_json)
     if (daily_limit !== undefined)     updates.daily_limit = daily_limit
     if (timezone !== undefined)        updates.timezone = timezone
     if (status !== undefined) {

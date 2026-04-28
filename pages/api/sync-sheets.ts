@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchContactsFromSheet } from '@/lib/integrations/sheets'
 import { requireApiKey } from '@/lib/api-auth'
+import { throttle } from '@/lib/rate-limit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,6 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!requireApiKey(req, res)) return
+
+  if (!throttle('sync-sheets', 5_000)) {
+    return res.status(429).json({ error: 'Too many requests — wait a few seconds' })
+  }
 
   try {
     const sheetId = process.env.GOOGLE_SHEET_ID

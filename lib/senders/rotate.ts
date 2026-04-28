@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { decryptCredential } from '@/lib/crypto'
 import type { Sender } from './types'
 import { NoAvailableSenderError } from './errors'
 
@@ -34,7 +35,11 @@ export async function pickSender(): Promise<SenderWithCount> {
         .eq('sender_id', sender.id)
         .eq('date', today)
         .maybeSingle()
-      return { ...sender, sent_today: stat?.sent_count ?? 0 }
+      return {
+        ...sender,
+        credential_json: decryptCredential(sender.credential_json),
+        sent_today: stat?.sent_count ?? 0,
+      }
     })
   )
 

@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import { SendError, AuthError, TimeoutError, ValidationError } from './errors'
+import { AuthError, TimeoutError } from './errors'
 import * as crypto from 'crypto'
 
 let gmailClient: any = null
@@ -36,75 +36,6 @@ export interface EmailMessage {
   subject: string
   body: string
   timestamp: string
-}
-
-export async function sendEmail(
-  to: string,
-  subject: string,
-  body: string
-): Promise<string> {
-  if (!to || to.trim() === '') {
-    throw new ValidationError('Recipient email is required', 'to')
-  }
-
-  if (!subject || subject.trim() === '') {
-    throw new ValidationError('Subject is required', 'subject')
-  }
-
-  try {
-    const gmail = getGmailClient()
-    const email = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      'MIME-Version: 1.0',
-      '',
-      body,
-    ].join('\n')
-
-    const encodedMessage = Buffer.from(email)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '')
-
-    const response = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: encodedMessage,
-      },
-    })
-
-    return response.data.id || ''
-  } catch (error: any) {
-    if (error.message.includes('unauthenticated')) {
-      throw new AuthError('Gmail authentication failed')
-    }
-    throw new SendError(`Failed to send email: ${error.message}`, error)
-  }
-}
-
-export async function readInbox(maxResults: number = 10): Promise<EmailMessage[]> {
-  try {
-    const gmail = getGmailClient()
-    const response = await gmail.users.messages.list({
-      userId: 'me',
-      q: 'in:inbox',
-      maxResults,
-    })
-
-    if (!response.data.messages) {
-      return []
-    }
-
-    const messages = await Promise.all(
-      response.data.messages.map((msg: any) => getEmailBody(msg.id))
-    )
-
-    return messages.filter((msg): msg is EmailMessage => msg !== null)
-  } catch (error: any) {
-    throw new AuthError(`Failed to read inbox: ${error.message}`)
-  }
 }
 
 export async function getEmailBody(messageId: string): Promise<EmailMessage | null> {

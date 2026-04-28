@@ -1,5 +1,4 @@
-import { sendEmail, verifyWebhookSignature } from '@/lib/integrations/gmail'
-import { ValidationError } from '@/lib/integrations/errors'
+import { verifyWebhookSignature } from '@/lib/integrations/gmail'
 
 jest.mock('googleapis', () => ({
   google: {
@@ -10,16 +9,8 @@ jest.mock('googleapis', () => ({
   },
 }))
 
-describe('Gmail Integration Layer - Validation', () => {
-  test('sendEmail throws ValidationError for empty recipient', async () => {
-    await expect(sendEmail('', 'Subject', 'Body')).rejects.toThrow(ValidationError)
-  })
-
-  test('sendEmail throws ValidationError for empty subject', async () => {
-    await expect(sendEmail('test@example.com', '', 'Body')).rejects.toThrow(ValidationError)
-  })
-
-  test('verifyWebhookSignature returns false for empty secret', async () => {
+describe('Gmail Integration Layer', () => {
+  test('verifyWebhookSignature returns false when GMAIL_WEBHOOK_SECRET is not set', async () => {
     delete process.env.GMAIL_WEBHOOK_SECRET
     const result = await verifyWebhookSignature('sig', 'body')
     expect(result).toBe(false)
