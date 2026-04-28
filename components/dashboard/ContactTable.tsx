@@ -56,6 +56,9 @@ export function ContactTable({
                     <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Content Guideline</th>
                   </>
                 )}
+                {stage !== 'negotiated' && (
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Sender</th>
+                )}
               </>
             )}
           </tr>
@@ -81,7 +84,7 @@ export function ContactTable({
                     onDeleteContact(contact.id);
                     setExpandedId(null);
                   }}
-                  colSpan={stage === 'start-outreach' ? 4 : stage === 'send-followup' ? 7 : stage === 'negotiated' ? 12 : 10}
+                  colSpan={stage === 'start-outreach' ? 4 : stage === 'send-followup' ? 7 : stage === 'negotiated' ? 12 : 11}
                 />
               )}
             </React.Fragment>

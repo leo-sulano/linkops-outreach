@@ -95,6 +95,17 @@ export function ContactTableRow({
               </td>
             </>
           )}
+          {stage !== 'negotiated' && (
+            <td className="px-4 py-3 text-sm">
+              {contact.senderEmail ? (
+                <span className="inline-flex px-2 py-0.5 rounded text-xs font-mono bg-slate-700 text-slate-300">
+                  {contact.senderEmail}
+                </span>
+              ) : (
+                <span className="text-slate-600">—</span>
+              )}
+            </td>
+          )}
         </>
       )}
     </tr>
