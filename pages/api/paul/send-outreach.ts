@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { prisma } from '@/lib/prisma'
+import { fetchContactsFromSheet, updateContactInSheet } from '@/lib/integrations/sheets'
 import { generateOutreachEmail } from '@/lib/claude'
 import { sendOutreach } from '@/lib/senders/send'
-import type { Contact } from '@/components/dashboard/types'
 import { requireApiKey } from '@/lib/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -12,46 +11,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!requireApiKey(req, res)) return
 
+  const sheetId = process.env.GOOGLE_SHEET_ID
+  const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1'
+
+  if (!sheetId) {
+    return res.status(500).json({ error: 'GOOGLE_SHEET_ID not configured' })
+  }
+
   try {
-    const contacts = await prisma.prospect.findMany({
-      where: { status: 'OUTREACH_SENT' },
-      take: 5,
-    })
+    const allContacts = await fetchContactsFromSheet(sheetId, sheetTab)
+    const contacts = allContacts
+      .filter(c => c.status === 'start_outreach' && c.email)
+      .slice(0, 5)
 
     if (contacts.length === 0) {
-      return res.status(200).json({ success: true, message: 'No contacts to send outreach to', sent: 0 })
+      return res.status(200).json({ success: true, message: 'No contacts ready for outreach', sent: 0 })
     }
 
     let sent = 0
     const errors: string[] = []
 
-    for (const prospect of contacts) {
+    for (const contact of contacts) {
       try {
         const emailBody = await generateOutreachEmail(
-          prospect.name,
-          prospect.email,
-          prospect.websiteCategory || 'their-website.com'
+          contact.contact || contact.domain,
+          contact.email,
+          contact.domain
         )
 
-        const subject = `Link placement opportunity — ${prospect.websiteCategory || 'your site'}`
-
-        const contact: Contact = {
-          id: String(prospect.id),
-          domain: prospect.websiteCategory || prospect.email.split('@')[1] || '',
-          website: '',
-          niche: prospect.websiteCategory || '',
-          contact: prospect.name,
-          email: prospect.email,
-          status: 'outreach_sent',
-          linkType: '',
-          notes: '',
-        }
+        const subject = `Link placement opportunity — ${contact.domain}`
 
         await sendOutreach(contact, subject, emailBody)
+
+        // Mark as outreach_sent in sheet after successful send
+        const rowIndex = parseInt(contact.id, 10) - 1
+        await updateContactInSheet(sheetId, rowIndex, { status: 'outreach_sent' }, sheetTab)
+
         sent++
       } catch (err: any) {
-        console.error(`Failed to send to ${prospect.email}:`, err.message)
-        errors.push(`${prospect.email}: ${err.message}`)
+        console.error(`Failed to send to ${contact.email}:`, err.message)
+        errors.push(`${contact.email}: ${err.message}`)
       }
     }
 
