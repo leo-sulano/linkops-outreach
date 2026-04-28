@@ -35,6 +35,20 @@ export function ContactTableRow({
           </span>
         ) : '—'}
       </td>
+      <td className="px-4 py-3 text-sm text-slate-400">
+        {contact.traffic !== undefined ? (
+          <span className="font-mono text-xs">
+            {contact.traffic >= 1000000
+              ? `${(contact.traffic / 1000000).toFixed(1)}M`
+              : contact.traffic >= 1000
+              ? `${(contact.traffic / 1000).toFixed(0)}K`
+              : contact.traffic}
+            {contact.topCountry && (
+              <span className="ml-1 uppercase text-slate-500">{contact.topCountry}</span>
+            )}
+          </span>
+        ) : '—'}
+      </td>
       <td className="px-4 py-3 text-sm text-slate-300">{contact.niche}</td>
       <td className="px-4 py-3 text-sm text-slate-300">{contact.email}</td>
 

@@ -274,6 +274,96 @@ export function ExpandedRowDetail({
             </div>
           </div>
 
+          {/* Site Details Section */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-200 mb-4 uppercase tracking-widest">
+              Site Details
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">Global Traffic</label>
+                  <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400 font-mono">
+                    {edited.traffic?.toLocaleString() ?? '—'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">Top Country</label>
+                  <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400 font-mono uppercase">
+                    {edited.topCountry ?? '—'}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">Market</label>
+                  <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400">
+                    {edited.market ?? '—'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">Language</label>
+                  <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400">
+                    {edited.language ?? '—'}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-slate-500 mb-1">Micro Niche</label>
+                <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400">
+                  {edited.microNiche ?? '—'}
+                </div>
+              </div>
+              {edited.qaFailReason && (
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">QA Fail Reason</label>
+                  <div className="w-full bg-red-500/10 border border-red-500/20 rounded px-3 py-2 text-sm text-red-400">
+                    {edited.qaFailReason}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Acceptance & Deal Type */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-200 mb-4 uppercase tracking-widest">
+              Acceptance
+            </h3>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Casino', value: edited.acceptCasino },
+                  { label: 'Betting', value: edited.acceptBetting },
+                  { label: 'Link Insert', value: edited.linkInsert },
+                  { label: 'Sponsored', value: edited.sponsored },
+                ].map(({ label, value }) => (
+                  <span
+                    key={label}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono border ${
+                      value === true
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : value === false
+                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                        : 'bg-slate-700 text-slate-500 border-slate-600'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${value === true ? 'bg-emerald-400' : value === false ? 'bg-red-400' : 'bg-slate-500'}`} />
+                    {label}: {value === true ? 'Yes' : value === false ? 'No' : '—'}
+                  </span>
+                ))}
+              </div>
+              {(edited.originalCost || edited.originalCurrency) && (
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 mb-1">Original Price</label>
+                  <div className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400 font-mono">
+                    {edited.originalCurrency} {edited.originalCost ?? '—'}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Notes Section (full width) */}
           <div className="col-span-2">
             <h3 className="text-sm font-bold text-slate-200 mb-4 uppercase tracking-widest">

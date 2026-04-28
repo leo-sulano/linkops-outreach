@@ -30,6 +30,18 @@ export interface Contact {
   responseDate?: string;
   paymentStatus?: 'unpaid' | 'invoiced' | 'paid';
   senderEmail?: string;
+  traffic?: number;
+  topCountry?: string;
+  market?: string;
+  microNiche?: string;
+  language?: string;
+  acceptCasino?: boolean;
+  acceptBetting?: boolean;
+  linkInsert?: boolean;
+  sponsored?: boolean;
+  qaFailReason?: string;
+  originalCurrency?: string;
+  originalCost?: number;
 }
 
 export interface DashboardMetrics {

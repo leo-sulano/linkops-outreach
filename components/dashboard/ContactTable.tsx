@@ -33,6 +33,7 @@ export function ContactTable({
           <tr className="bg-slate-900/50 border-b border-slate-700">
             <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Domain</th>
             <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">DR</th>
+            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Traffic</th>
             <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Niche</th>
             <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Email</th>
             {stage === 'send-followup' && (
@@ -84,7 +85,7 @@ export function ContactTable({
                     onDeleteContact(contact.id);
                     setExpandedId(null);
                   }}
-                  colSpan={stage === 'start-outreach' ? 4 : stage === 'send-followup' ? 7 : stage === 'negotiated' ? 12 : 11}
+                  colSpan={stage === 'start-outreach' ? 5 : stage === 'send-followup' ? 8 : stage === 'negotiated' ? 13 : 12}
                 />
               )}
             </React.Fragment>
