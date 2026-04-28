@@ -180,6 +180,11 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
   }
 }
 
+function colIndexToLetter(col: number): string {
+  if (col < 26) return String.fromCharCode(65 + col)
+  return 'A' + String.fromCharCode(65 + col - 26)
+}
+
 export async function updateContactInSheet(
   sheetId: string,
   rowIndex: number,
@@ -205,20 +210,17 @@ export async function updateContactInSheet(
 
     if (Object.keys(colUpdates).length === 0) return
 
-    // Build full row array (42 cols, A:AP), leaving unchanged cells as null
-    const TOTAL_COLS = 42
-    const rowValues: (any)[] = Array(TOTAL_COLS).fill(null)
-    for (const [col, val] of Object.entries(colUpdates)) {
-      rowValues[Number(col)] = val ?? ''
-    }
+    const data = Object.entries(colUpdates).map(([col, val]) => ({
+      range: `'${tabName}'!${colIndexToLetter(Number(col))}${rowIndex + 1}`,
+      values: [[val ?? '']],
+    }))
 
-    const range = `${tabName}!A${rowIndex + 1}:AP${rowIndex + 1}`
-
-    await sheets.spreadsheets.values.update({
+    await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: sheetId,
-      range,
-      valueInputOption: 'RAW',
-      requestBody: { values: [rowValues] },
+      requestBody: {
+        valueInputOption: 'RAW',
+        data,
+      },
     })
 
     console.log(`✓ Updated row ${rowIndex + 1} in Sheet`)

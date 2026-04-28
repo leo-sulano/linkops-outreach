@@ -1,17 +1,12 @@
 import React from 'react';
 import { Contact, STATUS_COLORS, STATUS_LABELS } from './types';
+import { isDueForFollowup } from '@/lib/utils/followup';
 
 interface ContactTableRowProps {
   contact: Contact;
   isExpanded: boolean;
   onClick: () => void;
   stage?: string;
-}
-
-function isDueForFollowup(contact: Contact): boolean {
-  if (contact.status !== 'outreach_sent' || !contact.outreachDate) return false;
-  const daysSince = (Date.now() - new Date(contact.outreachDate).getTime()) / (1000 * 60 * 60 * 24);
-  return daysSince >= 2;
 }
 
 export function ContactTableRow({

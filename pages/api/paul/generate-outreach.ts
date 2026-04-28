@@ -73,7 +73,7 @@ export default async function handler(
     const message = await createMessage({
       contact_id: contact.id,
       direction: 'outbound',
-      from_email: 'outreach@yourcompany.com',
+      from_email: contact.email_account || process.env.DEFAULT_OUTREACH_EMAIL || 'outreach@linkops.io',
       to_email: contact.email1 || contact.email_account || '',
       subject,
       body,

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Contact, DashboardMetrics, NavCounts, PipelineStatus, STATUS_LABELS } from '@/components/dashboard/types';
+import { isDueForFollowup } from '@/lib/utils/followup';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -37,12 +38,7 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('all');
-
-  const isDueForFollowup = (c: Contact): boolean => {
-    if (c.status !== 'outreach_sent' || !c.outreachDate) return false;
-    const daysSince = (Date.now() - new Date(c.outreachDate).getTime()) / (1000 * 60 * 60 * 24);
-    return daysSince >= 2;
-  };
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Calculate metrics
   const metrics: DashboardMetrics = useMemo(() => {
@@ -131,6 +127,7 @@ export default function DashboardPage() {
       const data = await response.json();
 
       if (data.contacts && data.contacts.length > 0) {
+        setSyncError(null);
         setContacts(data.contacts);
         console.log(`✓ Synced ${data.contacts.length} contacts from Google Sheet`);
       } else if (response.ok) {
@@ -140,6 +137,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to sync from Sheet:', error);
+      setSyncError('Failed to load contacts. Check your Google Sheet connection.');
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +164,11 @@ export default function DashboardPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 w-full">
+            {syncError && (
+              <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {syncError}
+              </div>
+            )}
             {/* Metrics Grid */}
             <div className="grid grid-cols-4 gap-4 mb-8">
               <StatsCard label="Total Outreach" value={metrics.totalOutreach} />
