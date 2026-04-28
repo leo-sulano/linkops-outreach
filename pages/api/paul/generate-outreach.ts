@@ -77,6 +77,7 @@ export default async function handler(
       to_email: contact.email1 || contact.email_account || '',
       subject,
       body,
+      sent_at: new Date().toISOString(),
     });
 
     // Also call Paul Generator for backward compatibility

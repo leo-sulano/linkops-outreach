@@ -1,3 +1,5 @@
+import { Rocket, RefreshCw, Loader2 } from 'lucide-react';
+
 interface TopBarProps {
   onStartOutreach: () => void;
   onRefresh: () => void;
@@ -19,16 +21,18 @@ export function TopBar({ onStartOutreach, onRefresh, isLoading = false }: TopBar
       <div className="flex gap-3 flex-shrink-0">
         <button
           onClick={onStartOutreach}
-          className="px-4 py-2 bg-emerald-500 text-black font-black rounded-lg hover:bg-emerald-400 transition-colors text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-black font-black rounded-lg hover:bg-emerald-400 transition-colors text-sm"
         >
-          🚀 START OUTREACH
+          <Rocket size={15} />
+          START OUTREACH
         </button>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="px-4 py-2 bg-slate-700 text-slate-100 font-bold rounded-lg hover:bg-slate-600 disabled:bg-slate-600 disabled:opacity-60 transition-colors text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-100 font-bold rounded-lg hover:bg-slate-600 disabled:bg-slate-600 disabled:opacity-60 transition-colors text-sm"
         >
-          {isLoading ? '⏳ Syncing...' : '🔄 Sync Sheet'}
+          {isLoading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+          {isLoading ? 'Syncing...' : 'Sync Sheet'}
         </button>
       </div>
     </div>

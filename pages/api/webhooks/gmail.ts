@@ -28,6 +28,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Email message not found' })
     }
 
+    if (!emailMessage) {
+      return res.status(404).json({ error: 'Email message not found' })
+    }
+
     const senderEmail = emailMessage.from
     const senderDomain = senderEmail.split('@')[1]
 
@@ -51,6 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subject: emailMessage.subject,
         body: emailMessage.body,
         gmail_message_id: emailMessage.id,
+        sent_at: new Date().toISOString(),
       })
     }
 

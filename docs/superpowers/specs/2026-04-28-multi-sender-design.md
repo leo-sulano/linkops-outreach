@@ -178,7 +178,7 @@ Replace hardcoded Gmail call with `sendOutreach()` from `lib/senders/send.ts`. E
 
 **Sender table columns:** Name | Email | Type | Daily Limit | Sent Today | Status | Actions
 
-- **Add Sender** button → modal with fields: Name, Email, Type (Service Account / OAuth), Credential (JSON textarea for SA; "Connect Google Account" OAuth button for OAuth), Daily Limit, Timezone
+- **Add Sender** button → modal with fields: Name, Email, Type (Service Account only in v1 — OAuth is a follow-on), Credential (JSON paste textarea), Daily Limit, Timezone
 - **Status toggle** — click active/inactive inline, calls PUT `/api/senders/[id]`
 - **Error badge** — if `status = 'error'`, red badge with `last_error` in tooltip
 - **Sent Today** — from `/api/senders/stats`, resets at sender's local midnight

@@ -84,7 +84,7 @@ Make it feel personal and relevant to their site.`
     console.warn(`OpenAI failed, falling back to mock template: ${error.message}`)
 
     try {
-      const mockBody = getMockBody('standard', { domain, niche, name: contactName })
+      const mockBody = getMockBody('standard', domain, niche, contactName)
       return mockBody
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError)
