@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchContactsFromSheet, updateContactInSheet } from '@/lib/integrations/sheets'
-import { generateOutreachEmail } from '@/lib/claude'
+import { getMockSubject, getMockBody } from '@/lib/mocks/paulResponses'
 import { sendOutreach } from '@/lib/senders/send'
 import { requireApiKey } from '@/lib/api-auth'
 import { throttle } from '@/lib/rate-limit'
@@ -38,17 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const contact of contacts) {
       try {
-        const emailBody = await generateOutreachEmail(
-          contact.contact || contact.domain,
-          contact.email,
-          contact.domain
-        )
+        const subject = getMockSubject('standard', contact.domain, contact.niche, contact.contact)
+        const body = getMockBody('standard', contact.domain, contact.niche, contact.contact)
 
-        const subject = `Link placement opportunity — ${contact.domain}`
+        await sendOutreach(contact, subject, body)
 
-        await sendOutreach(contact, subject, emailBody)
-
-        // Mark as outreach_sent in sheet after successful send
         const rowIndex = parseInt(contact.id, 10) - 1
         await updateContactInSheet(sheetId, rowIndex, { status: 'outreach_sent' }, sheetTab)
 

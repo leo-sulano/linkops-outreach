@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { generateOutreachEmail, generateEmailSubject } from '@/lib/claude'
+import { getMockSubject, getMockBody } from '@/lib/mocks/paulResponses'
 import { getContact, createMessage } from '@/lib/integrations/supabase'
 import { NotFoundError } from '@/lib/integrations/errors'
 import { requireApiKey } from '@/lib/api-auth'
@@ -12,12 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!requireApiKey(req, res)) return
 
   try {
-    const { domain, publisherName, niche, contactName } = req.body
+    const { domain, publisherName, niche, contactName, category } = req.body
 
     if (!domain || !niche) {
       return res.status(400).json({ error: 'Missing required fields: domain, niche' })
     }
 
+    const validCategory = ['standard', 'warm', 'premium'].includes(category) ? category : 'standard'
     const name = contactName || publisherName || 'there'
 
     let contact
@@ -30,10 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw error
     }
 
-    const [subject, body] = await Promise.all([
-      generateEmailSubject(name, domain, niche),
-      generateOutreachEmail(name, contact.email1 || contact.email_account || '', domain),
-    ])
+    const subject = getMockSubject(validCategory, domain, niche, name)
+    const body = getMockBody(validCategory, domain, niche, name)
 
     const message = await createMessage({
       contact_id: contact.id,

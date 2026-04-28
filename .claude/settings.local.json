@@ -4,7 +4,12 @@
       "Bash(npm run *)",
       "Bash(npm ls *)",
       "Bash(gitnexus list *)",
-      "Bash(gitnexus serve *)"
+      "Bash(gitnexus serve *)",
+      "Bash(curl -s http://localhost:3000/api/sync-sheets)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);console.log\\('contacts:', j.contacts?.length ?? 0, j.error || j.warning || 'OK'\\)\")",
+      "Bash(curl -s http://localhost:4747/repos)",
+      "Bash(curl -s \"http://localhost:4747/\")",
+      "Bash(npx tsc *)"
     ]
   }
 }
