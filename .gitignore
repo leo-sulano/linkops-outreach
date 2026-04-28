@@ -32,3 +32,4 @@ yarn-error.log*
 # Production
 .env.production
 tsconfig.tsbuildinfo
+google-creds.json
