@@ -144,10 +144,6 @@ export default function DashboardPage() {
     setContacts(prev => prev.filter(c => c.id !== contactId));
   };
 
-  const handleStartOutreach = () => {
-    alert('Outreach would start here (not yet wired to API)');
-  };
-
   // On mount: load saved data from Supabase immediately
   useEffect(() => {
     loadFromSupabase();
@@ -159,7 +155,6 @@ export default function DashboardPage() {
 
       <main className="flex-1 flex flex-col overflow-hidden">
         <TopBar
-          onStartOutreach={handleStartOutreach}
           onRefresh={syncFromSheet}
           isLoading={isSyncing}
         />
