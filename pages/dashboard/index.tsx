@@ -123,7 +123,9 @@ export default function DashboardPage() {
   const syncContactsFromSheet = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/sync-sheets');
+      const response = await fetch('/api/sync-sheets', {
+        headers: { 'x-api-key': process.env.NEXT_PUBLIC_API_SECRET_KEY || '' },
+      });
       const data = await response.json();
 
       if (data.contacts && data.contacts.length > 0) {

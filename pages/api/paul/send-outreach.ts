@@ -3,11 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { generateOutreachEmail } from '@/lib/claude'
 import { sendOutreach } from '@/lib/senders/send'
 import type { Contact } from '@/components/dashboard/types'
+import { requireApiKey } from '@/lib/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  if (!requireApiKey(req, res)) return
 
   try {
     const contacts = await prisma.prospect.findMany({

@@ -1,11 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { updateContactInSheet } from '@/lib/integrations/sheets'
 import type { Contact } from '@/components/dashboard/types'
+import { requireApiKey } from '@/lib/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  if (!requireApiKey(req, res)) return
 
   try {
     const { contact, rowIndex } = req.body as { contact: Contact; rowIndex: number }

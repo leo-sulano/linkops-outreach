@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+
+const API_KEY = process.env.NEXT_PUBLIC_API_SECRET_KEY || ''
+const authHeaders = { 'x-api-key': API_KEY }
 import { Plus, RefreshCw } from 'lucide-react'
 import { SenderTable } from '@/components/dashboard/SenderTable'
 import { AddSenderModal } from '@/components/dashboard/AddSenderModal'
@@ -13,7 +16,7 @@ export default function SendersPage() {
   const loadSenders = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/senders/stats')
+      const res = await fetch('/api/senders/stats', { headers: authHeaders })
       const data = await res.json()
       setSenders(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -29,7 +32,7 @@ export default function SendersPage() {
     if (editing) {
       const res = await fetch(`/api/senders/${editing.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
@@ -39,7 +42,7 @@ export default function SendersPage() {
     } else {
       const res = await fetch('/api/senders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
@@ -52,7 +55,7 @@ export default function SendersPage() {
   }
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/senders/${id}`, { method: 'DELETE' })
+    await fetch(`/api/senders/${id}`, { method: 'DELETE', headers: authHeaders })
     await loadSenders()
   }
 
@@ -60,7 +63,7 @@ export default function SendersPage() {
     const next = currentStatus === 'active' ? 'inactive' : 'active'
     await fetch(`/api/senders/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ status: next }),
     })
     await loadSenders()

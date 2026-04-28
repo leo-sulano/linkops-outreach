@@ -1,9 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { requireApiKey } from '@/lib/api-auth'
 
 const PUBLIC_COLUMNS = 'id, name, email, credential_type, daily_limit, timezone, status, last_error, last_used_at, created_at'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireApiKey(req, res)) return
+
   const { id } = req.query
   if (typeof id !== 'string') return res.status(400).json({ error: 'Invalid id' })
 

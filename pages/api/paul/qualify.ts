@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { qualifyDomain, type DomainScore } from '../../../lib/paul';
 import { getContact, saveMetadata, createMetadata, getMetadata } from '@/lib/integrations/supabase';
 import { NotFoundError } from '@/lib/integrations/errors';
+import { requireApiKey } from '@/lib/api-auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,6 +11,8 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!requireApiKey(req, res)) return
 
   try {
     const {
