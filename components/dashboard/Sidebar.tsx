@@ -12,6 +12,7 @@ import {
   Link,
   Inbox,
   FileText,
+  Users,
 } from 'lucide-react';
 import { NavCounts } from './types';
 
@@ -36,9 +37,10 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage }: Sid
   ];
 
   const toolsItems = [
-    { label: 'Link Tracker', count: 2, icon: Link },
-    { label: 'Inbox Monitor', count: 3, icon: Inbox },
-    { label: 'Outreach Templates', count: 5, icon: FileText },
+    { label: 'Senders', href: '/dashboard/senders', icon: Users },
+    { label: 'Link Tracker', href: '#', icon: Link },
+    { label: 'Inbox Monitor', href: '#', icon: Inbox },
+    { label: 'Outreach Templates', href: '#', icon: FileText },
   ];
 
   return (
@@ -111,16 +113,11 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage }: Sid
             {toolsItems.map((item) => (
               <a
                 key={item.label}
-                href="#"
+                href={item.href}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
               >
                 <item.icon size={16} className="flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
-                {item.count > 0 && (
-                  <span className="font-mono text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
-                    {item.count}
-                  </span>
-                )}
               </a>
             ))}
           </div>
