@@ -45,11 +45,11 @@ let sheetsClient: any = null
 
 function getSheetsClient() {
   if (!sheetsClient) {
-    const path = require('path')
-    const keyFilePath = path.join(process.cwd(), 'google-creds.json')
+    const credsJson = process.env.GOOGLE_CREDENTIALS_JSON
+    if (!credsJson) throw new Error('GOOGLE_CREDENTIALS_JSON env var is not set')
 
     const auth = new google.auth.GoogleAuth({
-      keyFilename: keyFilePath,
+      credentials: JSON.parse(credsJson),
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     })
 
