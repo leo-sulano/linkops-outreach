@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { mockContacts } from '@/lib/mockData';
 import { Contact, DashboardMetrics, NavCounts, PipelineStatus, STATUS_LABELS } from '@/components/dashboard/types';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopBar } from '@/components/dashboard/TopBar';
@@ -35,7 +34,7 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('all');
 
