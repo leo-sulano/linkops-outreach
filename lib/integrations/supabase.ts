@@ -220,6 +220,62 @@ export async function saveMetadata(
   return data as ContactMetadata
 }
 
+function toSupabaseStatus(pipelineStatus: string): string {
+  const map: Record<string, string> = {
+    start_outreach:    'pending',
+    outreach_sent:     'pending',
+    send_followup:     'follow_up',
+    response_received: 'pending',
+    under_negotiation: 'under_negotiation',
+    negotiated:        'under_negotiation',
+    approved:          'approved',
+    payment_sent:      'approved',
+    live:              'approved',
+  }
+  return map[pipelineStatus] ?? 'pending'
+}
+
+export async function upsertContactsFromSheet(contacts: import('@/components/dashboard/types').Contact[]): Promise<{ upserted: number; errors: number }> {
+  if (contacts.length === 0) return { upserted: 0, errors: 0 }
+
+  const client = getSupabaseClient()
+  const now = new Date().toISOString()
+
+  const rows = contacts.map(c => ({
+    domain:          c.domain,
+    niche:           c.niche || '',
+    email1:          c.email || null,
+    name1:           c.contact || null,
+    email_account:   c.senderEmail || null,
+    notes:           c.notes || null,
+    date_confirmed:  c.publishDate || null,
+    status:          toSupabaseStatus(c.status),
+    follow_up_count: 0,
+    updated_at:      now,
+  }))
+
+  // Batch in chunks of 100 to avoid payload limits
+  const CHUNK = 100
+  let upserted = 0
+  let errors = 0
+
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK)
+    const { error } = await client
+      .from('contacts')
+      .upsert(chunk, { onConflict: 'domain', ignoreDuplicates: false })
+
+    if (error) {
+      console.error('Supabase upsert error:', error.message)
+      errors += chunk.length
+    } else {
+      upserted += chunk.length
+    }
+  }
+
+  return { upserted, errors }
+}
+
 export async function createMetadata(
   contactId: string,
   data: Partial<ContactMetadata>

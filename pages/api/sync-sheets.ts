@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fetchContactsFromSheet } from '@/lib/integrations/sheets'
+import { upsertContactsFromSheet } from '@/lib/integrations/supabase'
 import { requireApiKey } from '@/lib/api-auth'
 import { throttle } from '@/lib/rate-limit'
 
@@ -24,6 +25,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const contacts = await fetchContactsFromSheet(sheetId, sheetTab)
+
+    // Persist to Supabase (non-fatal — dashboard still loads from sheet data)
+    if (contacts.length > 0) {
+      upsertContactsFromSheet(contacts).then(({ upserted, errors }) => {
+        if (errors > 0) console.warn(`Supabase upsert: ${upserted} ok, ${errors} failed`)
+        else console.log(`✓ Upserted ${upserted} contacts to Supabase`)
+      }).catch(err => console.error('Supabase upsert failed:', err.message))
+    }
 
     return res.status(200).json({ contacts })
   } catch (error: any) {
