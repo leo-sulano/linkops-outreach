@@ -33,3 +33,7 @@ yarn-error.log*
 .env.production
 tsconfig.tsbuildinfo
 google-creds.json
+.gitnexus
+
+# Internal agent files (local review only)
+.agent/
