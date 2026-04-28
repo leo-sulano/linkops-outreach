@@ -8,6 +8,8 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ContactTable } from '@/components/dashboard/ContactTable';
 
+const CACHE_KEY = 'linkops_contacts';
+
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
   'start-outreach': 'start_outreach',
@@ -34,11 +36,29 @@ const STAGE_LABELS: Record<string, string> = {
   'live': 'Live',
 };
 
+function loadCached(): Contact[] {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCache(contacts: Contact[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(contacts));
+  } catch {
+    // Storage full or unavailable — non-fatal
+  }
+}
+
 export default function DashboardPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('all');
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
 
   // Calculate metrics
   const metrics: DashboardMetrics = useMemo(() => {
@@ -71,12 +91,7 @@ export default function DashboardPage() {
       ? Math.round((totalApproved / total) * 100)
       : 0;
 
-    return {
-      totalOutreach: total,
-      totalResponses,
-      totalApproved,
-      conversionRate,
-    };
+    return { totalOutreach: total, totalResponses, totalApproved, conversionRate };
   }, [contacts]);
 
   // Calculate nav counts
@@ -106,13 +121,19 @@ export default function DashboardPage() {
 
   // Handlers
   const handleUpdateContact = (updatedContact: Contact) => {
-    setContacts((prev) =>
-      prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
-    );
+    setContacts(prev => {
+      const updated = prev.map(c => c.id === updatedContact.id ? updatedContact : c);
+      saveCache(updated);
+      return updated;
+    });
   };
 
   const handleDeleteContact = (contactId: string) => {
-    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    setContacts(prev => {
+      const updated = prev.filter(c => c.id !== contactId);
+      saveCache(updated);
+      return updated;
+    });
   };
 
   const handleStartOutreach = () => {
@@ -131,16 +152,18 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         const msg = data.error || `Server error (${response.status})`;
-        console.error('Sync error:', msg);
         setSyncError(`Sync failed: ${msg}`);
         return;
       }
 
       if (data.contacts && data.contacts.length > 0) {
         setContacts(data.contacts);
+        saveCache(data.contacts);
+        setLastSynced(new Date().toLocaleTimeString());
         console.log(`✓ Synced ${data.contacts.length} contacts from Google Sheet`);
       } else {
         setContacts([]);
+        saveCache([]);
         console.warn('Sheet returned 0 contacts');
       }
     } catch (error) {
@@ -151,25 +174,22 @@ export default function DashboardPage() {
     }
   };
 
-  const handleRefresh = () => {
-    syncContactsFromSheet();
-  };
-
+  // On mount: load cache immediately, then sync from Sheet in background
   useEffect(() => {
+    const cached = loadCached();
+    if (cached.length > 0) {
+      setContacts(cached);
+    }
     syncContactsFromSheet();
   }, []);
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-      {/* Sidebar */}
       <Sidebar navCounts={navCounts} selectedStage={selectedStage} onSelectStage={setSelectedStage} />
 
-      {/* Main Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <TopBar onStartOutreach={handleStartOutreach} onRefresh={handleRefresh} isLoading={isLoading} />
+        <TopBar onStartOutreach={handleStartOutreach} onRefresh={syncContactsFromSheet} isLoading={isLoading} />
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 w-full">
             {syncError && (
@@ -177,6 +197,7 @@ export default function DashboardPage() {
                 {syncError}
               </div>
             )}
+
             {/* Metrics Grid */}
             <div className="grid grid-cols-4 gap-4 mb-8">
               <StatsCard label="Total Outreach" value={metrics.totalOutreach} />
@@ -187,9 +208,16 @@ export default function DashboardPage() {
 
             {/* Contact Table */}
             <div>
-              <h2 className="text-lg font-bold text-slate-100 mb-4">
-                {STAGE_LABELS[selectedStage]} ({filteredContacts.length})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-100">
+                  {STAGE_LABELS[selectedStage]} ({filteredContacts.length})
+                </h2>
+                {lastSynced && (
+                  <span className="text-xs font-mono text-slate-500">
+                    Last synced {lastSynced}
+                  </span>
+                )}
+              </div>
               <ContactTable
                 contacts={filteredContacts}
                 onUpdateContact={handleUpdateContact}
