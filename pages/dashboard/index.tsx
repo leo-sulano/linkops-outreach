@@ -120,7 +120,23 @@ export default function DashboardPage() {
     }
   };
 
-  const handleUpdateContact = (updatedContact: Contact) => {
+  const handleUpdateContact = async (updatedContact: Contact) => {
+    const rowIndex = parseInt(updatedContact.id, 10);
+    try {
+      const res = await fetch('/api/save-contact', {
+        method: 'POST',
+        headers: { ...API_HEADERS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact: updatedContact, rowIndex }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || `Save failed (${res.status})`);
+        return;
+      }
+    } catch {
+      setError('Failed to save contact.');
+      return;
+    }
     setContacts(prev => prev.map(c => c.id === updatedContact.id ? updatedContact : c));
   };
 

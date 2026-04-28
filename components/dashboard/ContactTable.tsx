@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Contact } from './types';
 import { ContactTableRow } from './ContactTableRow';
-import { ExpandedRowDetail } from './ExpandedRowDetail';
+import { EditContactModal } from './EditContactModal';
 
 interface ContactTableProps {
   contacts: Contact[];
-  onUpdateContact: (contact: Contact) => void;
+  onUpdateContact: (contact: Contact) => Promise<void>;
   onDeleteContact: (contactId: string) => void;
   stage?: string;
 }
@@ -16,7 +16,7 @@ export function ContactTable({
   onDeleteContact,
   stage = 'all',
 }: ContactTableProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [modalContact, setModalContact] = useState<Contact | null>(null);
 
   if (contacts.length === 0) {
     return (
@@ -27,71 +27,68 @@ export function ContactTable({
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-x-auto">
-      <table className="w-full min-w-max">
-        <thead>
-          <tr className="bg-slate-900/50 border-b border-slate-700">
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Domain</th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">DR</th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Traffic</th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Niche</th>
-            <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Email</th>
-            {stage === 'send-followup' && (
-              <>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Outreach Date</th>
-              </>
-            )}
-            {stage !== 'start-outreach' && stage !== 'send-followup' && (
-              <>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Website</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">TAT</th>
-                <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Link Type</th>
-                {stage === 'negotiated' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Notes</th>
-                    <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Content Guideline</th>
-                  </>
-                )}
-                {stage !== 'negotiated' && (
-                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Sender</th>
-                )}
-              </>
-            )}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-700">
-          {contacts.map((contact) => (
-            <React.Fragment key={contact.id}>
+    <>
+      <EditContactModal
+        contact={modalContact}
+        onClose={() => setModalContact(null)}
+        onSave={async (updated) => {
+          await onUpdateContact(updated);
+          setModalContact(null);
+        }}
+        onDelete={(id) => {
+          onDeleteContact(id);
+          setModalContact(null);
+        }}
+      />
+      <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-max">
+          <thead>
+            <tr className="bg-slate-900/50 border-b border-slate-700">
+              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Domain</th>
+              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">DR</th>
+              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Traffic</th>
+              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Niche</th>
+              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Email</th>
+              {stage === 'send-followup' && (
+                <>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Outreach Date</th>
+                </>
+              )}
+              {stage !== 'start-outreach' && stage !== 'send-followup' && (
+                <>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Website</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Contact</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">TAT</th>
+                  <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Link Type</th>
+                  {stage === 'negotiated' && (
+                    <>
+                      <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Notes</th>
+                      <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Content Guideline</th>
+                    </>
+                  )}
+                  {stage !== 'negotiated' && (
+                    <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-slate-500">Sender</th>
+                  )}
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-700">
+            {contacts.map((contact) => (
               <ContactTableRow
+                key={contact.id}
                 contact={contact}
-                isExpanded={expandedId === contact.id}
-                onClick={() =>
-                  setExpandedId(
-                    expandedId === contact.id ? null : contact.id
-                  )
-                }
+                onClick={() => setModalContact(contact)}
                 stage={stage}
               />
-              {expandedId === contact.id && (
-                <ExpandedRowDetail
-                  contact={contact}
-                  onSave={onUpdateContact}
-                  onDelete={() => {
-                    onDeleteContact(contact.id);
-                    setExpandedId(null);
-                  }}
-                  colSpan={stage === 'start-outreach' ? 5 : stage === 'send-followup' ? 8 : stage === 'negotiated' ? 13 : 12}
-                />
-              )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

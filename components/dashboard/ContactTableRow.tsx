@@ -4,23 +4,19 @@ import { isDueForFollowup } from '@/lib/utils/followup';
 
 interface ContactTableRowProps {
   contact: Contact;
-  isExpanded: boolean;
   onClick: () => void;
   stage?: string;
 }
 
 export function ContactTableRow({
   contact,
-  isExpanded,
   onClick,
   stage = 'all',
 }: ContactTableRowProps) {
   return (
     <tr
       onClick={onClick}
-      className={`hover:bg-slate-800/50 cursor-pointer transition-colors ${
-        isExpanded ? 'bg-slate-800/30' : ''
-      }`}
+      className="hover:bg-slate-800/50 cursor-pointer transition-colors"
     >
       <td className="px-4 py-3 text-sm font-semibold text-slate-100">{contact.domain}</td>
       <td className="px-4 py-3 text-sm text-center">
