@@ -20,9 +20,10 @@ interface SidebarProps {
   navCounts: NavCounts;
   selectedStage?: string;
   onSelectStage?: (stage: string) => void;
+  onAllContactsOpen?: () => void;
 }
 
-export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage }: SidebarProps) {
+export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage, onAllContactsOpen }: SidebarProps) {
   const pipelineItems = [
     { id: 'all', label: 'All Contacts', count: navCounts.all, icon: LayoutGrid },
     { id: 'start-outreach', label: 'Start Outreach', count: navCounts.startOutreach, icon: Mail },
@@ -84,7 +85,11 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage }: Sid
                 key={item.id}
                 onClick={(e) => {
                   e.preventDefault();
-                  onSelectStage?.(item.id);
+                  if (item.id === 'all') {
+                    onAllContactsOpen?.();
+                  } else {
+                    onSelectStage?.(item.id);
+                  }
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   selectedStage === item.id
