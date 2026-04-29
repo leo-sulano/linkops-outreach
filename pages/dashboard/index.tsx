@@ -8,6 +8,7 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ContactTable } from '@/components/dashboard/ContactTable';
 import { CountryFilter } from '@/components/dashboard/CountryFilter';
+import { AllContactsModal } from '@/components/dashboard/AllContactsModal';
 
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [showAllContacts, setShowAllContacts] = useState(false);
 
   const metrics: DashboardMetrics = useMemo(() => {
     const total = contacts.length;
@@ -159,7 +161,12 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-      <Sidebar navCounts={navCounts} selectedStage={selectedStage} onSelectStage={setSelectedStage} />
+      <Sidebar
+        navCounts={navCounts}
+        selectedStage={selectedStage}
+        onSelectStage={setSelectedStage}
+        onAllContactsOpen={() => setShowAllContacts(true)}
+      />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         <TopBar
@@ -210,6 +217,15 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {showAllContacts && (
+        <AllContactsModal
+          contacts={contacts}
+          onUpdateContact={handleUpdateContact}
+          onDeleteContact={handleDeleteContact}
+          onClose={() => setShowAllContacts(false)}
+        />
+      )}
     </div>
   );
 }
