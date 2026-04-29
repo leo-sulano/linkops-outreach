@@ -18,8 +18,12 @@ export function AllContactsModal({
 }: AllContactsModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKey);
+    };
   }, [onClose]);
 
   return (
@@ -31,7 +35,10 @@ export function AllContactsModal({
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-[95vw] h-[95vh] bg-slate-900 border border-slate-700 rounded-xl flex flex-col overflow-hidden">
+      <div
+        className="relative z-10 w-[95vw] h-[95vh] bg-slate-900 border border-slate-700 rounded-xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -42,6 +49,7 @@ export function AllContactsModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close all contacts"
             className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
           >
             <X size={18} />
