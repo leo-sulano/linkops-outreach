@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Contact, DashboardMetrics, NavCounts, PipelineStatus } from '@/components/dashboard/types';
-import { isDueForFollowup } from '@/lib/utils/followup';
+import { deriveStatus } from '@/lib/utils/deriveStatus';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ContactTable } from '@/components/dashboard/ContactTable';
+import { CountryFilter } from '@/components/dashboard/CountryFilter';
 
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
@@ -60,26 +62,32 @@ export default function DashboardPage() {
 
   const navCounts: NavCounts = useMemo(() => ({
     all: contacts.length,
-    startOutreach: contacts.filter(c => c.status === 'start_outreach').length,
-    outreachSent: contacts.filter(c => c.status === 'outreach_sent').length,
-    sendFollowup: contacts.filter(c => c.status === 'send_followup' || isDueForFollowup(c)).length,
-    responseReceived: contacts.filter(c => c.status === 'response_received').length,
-    underNegotiation: contacts.filter(c => c.status === 'under_negotiation').length,
-    negotiated: contacts.filter(c => c.status === 'negotiated').length,
-    approved: contacts.filter(c => c.status === 'approved').length,
-    paymentSent: contacts.filter(c => c.status === 'payment_sent').length,
-    live: contacts.filter(c => c.status === 'live').length,
+    startOutreach: contacts.filter(c => deriveStatus(c) === 'start_outreach').length,
+    outreachSent: contacts.filter(c => deriveStatus(c) === 'outreach_sent').length,
+    sendFollowup: contacts.filter(c => deriveStatus(c) === 'send_followup').length,
+    responseReceived: contacts.filter(c => deriveStatus(c) === 'response_received').length,
+    underNegotiation: contacts.filter(c => deriveStatus(c) === 'under_negotiation').length,
+    negotiated: contacts.filter(c => deriveStatus(c) === 'negotiated').length,
+    approved: contacts.filter(c => deriveStatus(c) === 'approved').length,
+    paymentSent: contacts.filter(c => deriveStatus(c) === 'payment_sent').length,
+    live: contacts.filter(c => deriveStatus(c) === 'live').length,
   }), [contacts]);
 
+  const availableCountries = useMemo(() => {
+    const seen = new Set<string>();
+    contacts.forEach(c => { if (c.market) seen.add(c.market); });
+    return Array.from(seen).sort();
+  }, [contacts]);
+
   const filteredContacts = useMemo(() => {
-    if (selectedStage === 'all') return contacts;
-    if (selectedStage === 'send-followup') {
-      return contacts.filter(c => c.status === 'send_followup' || isDueForFollowup(c));
+    let result = contacts;
+    if (selectedStage !== 'all') {
+      const targetStatus = STAGE_TO_STATUS[selectedStage];
+      if (targetStatus) result = result.filter(c => deriveStatus(c) === targetStatus);
     }
-    const targetStatus = STAGE_TO_STATUS[selectedStage];
-    if (!targetStatus) return contacts;
-    return contacts.filter(c => c.status === targetStatus);
-  }, [contacts, selectedStage]);
+    if (selectedCountry) result = result.filter(c => c.market === selectedCountry);
+    return result;
+  }, [contacts, selectedStage, selectedCountry]);
 
   // Load from Supabase on mount — fast, no Google API call
   const loadFromSupabase = async () => {
@@ -175,7 +183,7 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-slate-100">
                   {isLoading ? 'Loading...' : `${STAGE_LABELS[selectedStage]} (${filteredContacts.length})`}
                 </h2>
@@ -184,6 +192,13 @@ export default function DashboardPage() {
                     Last synced {lastSynced}
                   </span>
                 )}
+              </div>
+              <div className="mb-4">
+                <CountryFilter
+                  countries={availableCountries}
+                  selected={selectedCountry}
+                  onSelect={setSelectedCountry}
+                />
               </div>
               <ContactTable
                 contacts={filteredContacts}

@@ -29,6 +29,7 @@ export function ContactTable({
   return (
     <>
       <EditContactModal
+        key={modalContact?.id ?? 'none'}
         contact={modalContact}
         onClose={() => setModalContact(null)}
         onSave={async (updated) => {

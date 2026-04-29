@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Contact, STATUS_LABELS } from './types';
+import { deriveStatus, MANUAL_PIPELINE_STAGES } from '@/lib/utils/deriveStatus';
 
 interface EditContactModalProps {
   contact: Contact | null;
@@ -10,12 +11,8 @@ interface EditContactModalProps {
 }
 
 export function EditContactModal({ contact, onClose, onSave, onDelete }: EditContactModalProps) {
-  const [edited, setEdited] = useState<Contact | null>(null);
+  const [edited, setEdited] = useState<Contact | null>(() => contact ? { ...contact } : null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setEdited(contact ? { ...contact } : null);
-  }, [contact]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -46,6 +43,9 @@ export function EditContactModal({ contact, onClose, onSave, onDelete }: EditCon
   const inputCls = 'w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500';
   const readCls = 'w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-400';
   const labelCls = 'block text-xs font-mono text-slate-500 mb-1';
+
+  const effectiveStatus = deriveStatus(edited);
+  const isManualStage = MANUAL_PIPELINE_STAGES.includes(edited.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={onClose}>
@@ -103,10 +103,19 @@ export function EditContactModal({ contact, onClose, onSave, onDelete }: EditCon
             <div className="space-y-3">
               <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500 mb-3">Pipeline Status</h3>
               <div>
-                <label className={labelCls}>Status</label>
-                <select className={inputCls} value={edited.status} onChange={e => set('status', e.target.value)}>
-                  {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
+                <label className={labelCls}>Current Stage</label>
+                <div className={`${readCls} font-mono`}>{STATUS_LABELS[effectiveStatus]}</div>
+              </div>
+              <div>
+                <label className={labelCls}>Advance Stage</label>
+                <select
+                  className={inputCls}
+                  value={isManualStage ? edited.status : ''}
+                  onChange={e => set('status', e.target.value || 'start_outreach')}
+                >
+                  <option value="">— Auto (based on dates) —</option>
+                  {MANUAL_PIPELINE_STAGES.map(s => (
+                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                   ))}
                 </select>
               </div>

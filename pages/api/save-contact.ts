@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Write to Google Sheet and Supabase in parallel
     await Promise.all([
       updateContactInSheet(sheetId, rowIndex, contact, sheetTab),
-      updateSheetContact(contact.domain, contact),
+      updateSheetContact(rowIndex, contact),
     ])
 
     return res.status(200).json({ success: true })

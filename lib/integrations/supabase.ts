@@ -292,7 +292,7 @@ export async function upsertSheetContacts(contacts: SheetContact[]): Promise<voi
   for (let i = 0; i < rows.length; i += CHUNK) {
     const { error } = await client
       .from('sheet_contacts')
-      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'domain' })
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'row_index' })
     if (error) console.error('sheet_contacts upsert error:', error.message)
   }
 }
@@ -307,12 +307,12 @@ export async function getSheetContacts(): Promise<SheetContact[]> {
   return (data || []).map((row: any) => row.data as SheetContact)
 }
 
-export async function updateSheetContact(domain: string, contact: SheetContact): Promise<void> {
+export async function updateSheetContact(rowIndex: number, contact: SheetContact): Promise<void> {
   const client = getSupabaseClient()
   const { error } = await client
     .from('sheet_contacts')
     .update({ data: contact, synced_at: new Date().toISOString() })
-    .eq('domain', domain)
+    .eq('row_index', rowIndex)
   if (error) console.error('sheet_contacts update error:', error.message)
 }
 

@@ -119,25 +119,25 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
 
     const dataRows = rows.slice(1) // skip header row
 
-    const contacts: Contact[] = dataRows
-      .filter((row) => row[COL.NAME]?.trim())
-      .map((row: any[], index: number) => {
-        const str = (i: number) => row[i]?.toString().trim() || ''
-        const num = (i: number) => {
+    const contacts: Contact[] = dataRows.reduce<Contact[]>((acc, row, index) => {
+      if (!row[COL.NAME]?.trim()) return acc
+
+      const str = (i: number) => row[i]?.toString().trim() || ''
+      const num = (i: number) => {
           const v = row[i]
           if (!v || v === '') return undefined
           const n = Number(v)
           return isNaN(n) ? undefined : n
         }
 
-        const parseBool = (i: number) => {
+      const parseBool = (i: number) => {
           const v = row[i]?.toString().trim().toUpperCase()
           if (v === 'TRUE') return true
           if (v === 'FALSE') return false
           return undefined
         }
 
-        return {
+      acc.push({
           id: String(index + 2),
           domain: str(COL.NAME),
           website: '',
@@ -170,8 +170,9 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
           followupDate: undefined,
           responseDate: undefined,
           paymentStatus: undefined,
-        }
-      })
+        })
+      return acc
+    }, [])
 
     return contacts
   } catch (error: any) {
@@ -183,6 +184,18 @@ export async function fetchContactsFromSheet(sheetId: string, tabName: string = 
 function colIndexToLetter(col: number): string {
   if (col < 26) return String.fromCharCode(65 + col)
   return 'A' + String.fromCharCode(65 + col - 26)
+}
+
+const STATUS_TO_SHEET: Record<string, string> = {
+  start_outreach:    'Pending',
+  outreach_sent:     'Sent 1st',
+  send_followup:     'Sent 2nd',
+  response_received: 'Confirmed',
+  under_negotiation: 'Negotiation',
+  negotiated:        'Negotiated',
+  approved:          'Approved',
+  payment_sent:      'Payment Sent',
+  live:              'Live',
 }
 
 export async function updateContactInSheet(
@@ -200,7 +213,7 @@ export async function updateContactInSheet(
     if (updates.niche !== undefined)            colUpdates[COL.MAJOR_NICHE] = updates.niche
     if (updates.email !== undefined)            colUpdates[COL.EMAIL_1] = updates.email
     if (updates.contact !== undefined)          colUpdates[COL.NAME_1] = updates.contact
-    if (updates.status !== undefined)           colUpdates[COL.STATUS] = updates.status
+    if (updates.status !== undefined)           colUpdates[COL.STATUS] = STATUS_TO_SHEET[updates.status] ?? updates.status
     if (updates.linkType !== undefined)         colUpdates[COL.LINK_TERM] = updates.linkType
     if (updates.publishDate !== undefined)      colUpdates[COL.DATE_CONFIRMED] = updates.publishDate
     if (updates.notes !== undefined)            colUpdates[COL.NOTES] = updates.notes
@@ -210,8 +223,9 @@ export async function updateContactInSheet(
 
     if (Object.keys(colUpdates).length === 0) return
 
+    // rowIndex is the 1-based sheet row number (id matches sheet row)
     const data = Object.entries(colUpdates).map(([col, val]) => ({
-      range: `'${tabName}'!${colIndexToLetter(Number(col))}${rowIndex + 1}`,
+      range: `'${tabName}'!${colIndexToLetter(Number(col))}${rowIndex}`,
       values: [[val ?? '']],
     }))
 
