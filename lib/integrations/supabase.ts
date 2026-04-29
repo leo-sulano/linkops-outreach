@@ -299,12 +299,24 @@ export async function upsertSheetContacts(contacts: SheetContact[]): Promise<voi
 
 export async function getSheetContacts(): Promise<SheetContact[]> {
   const client = getSupabaseClient()
-  const { data, error } = await client
-    .from('sheet_contacts')
-    .select('data')
-    .order('row_index', { ascending: true })
-  if (error) throw new Error(error.message)
-  return (data || []).map((row: any) => row.data as SheetContact)
+  const PAGE_SIZE = 1000
+  const all: SheetContact[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await client
+      .from('sheet_contacts')
+      .select('data')
+      .order('row_index', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) break
+    all.push(...data.map((row: any) => row.data as SheetContact))
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+
+  return all
 }
 
 export async function updateSheetContact(rowIndex: number, contact: SheetContact): Promise<void> {
