@@ -9,6 +9,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ContactTable } from '@/components/dashboard/ContactTable';
 import { CountryFilter } from '@/components/dashboard/CountryFilter';
 import { AllContactsModal } from '@/components/dashboard/AllContactsModal';
+import { SendCampaignModal } from '@/components/dashboard/SendCampaignModal';
 
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [showAllContacts, setShowAllContacts] = useState(false);
+  const [showSendCampaign, setShowSendCampaign] = useState(false);
 
   const metrics: DashboardMetrics = useMemo(() => {
     const total = contacts.length;
@@ -172,6 +174,7 @@ export default function DashboardPage() {
         <TopBar
           onRefresh={syncFromSheet}
           isLoading={isSyncing}
+          onSendCampaign={() => setShowSendCampaign(true)}
         />
 
         <div className="flex-1 overflow-y-auto">
@@ -224,6 +227,13 @@ export default function DashboardPage() {
           onUpdateContact={handleUpdateContact}
           onDeleteContact={handleDeleteContact}
           onClose={() => setShowAllContacts(false)}
+        />
+      )}
+
+      {showSendCampaign && (
+        <SendCampaignModal
+          onClose={() => setShowSendCampaign(false)}
+          onRefresh={loadFromSupabase}
         />
       )}
     </div>
