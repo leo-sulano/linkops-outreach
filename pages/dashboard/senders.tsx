@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react'
 
 const API_KEY = process.env.NEXT_PUBLIC_API_SECRET_KEY || ''
 const authHeaders = { 'x-api-key': API_KEY }
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw, Send } from 'lucide-react'
 import { SenderTable } from '@/components/dashboard/SenderTable'
 import { AddSenderModal } from '@/components/dashboard/AddSenderModal'
 import type { SenderWithStats, SenderPublic } from '@/lib/senders/types'
+import { SendCampaignModal } from '@/components/dashboard/SendCampaignModal'
 
 export default function SendersPage() {
   const [senders, setSenders] = useState<SenderWithStats[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<SenderPublic | null>(null)
+  const [showSendCampaign, setShowSendCampaign] = useState(false)
 
   const loadSenders = async () => {
     setLoading(true)
@@ -90,6 +92,13 @@ export default function SendersPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowSendCampaign(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-emerald-500/50 text-emerald-400 font-bold rounded-lg hover:bg-emerald-500/10 transition-colors text-sm"
+            >
+              <Send size={16} />
+              Send Campaign
+            </button>
             <button
               onClick={loadSenders}
               disabled={loading}
@@ -173,6 +182,13 @@ export default function SendersPage() {
         onSave={handleSave}
         editing={editing}
       />
+
+      {showSendCampaign && (
+        <SendCampaignModal
+          onClose={() => setShowSendCampaign(false)}
+          onRefresh={loadSenders}
+        />
+      )}
     </div>
   )
 }
