@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
 function getLocalDate(timezone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date())
@@ -8,7 +8,7 @@ function getLocalDate(timezone: string): string {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const client = getSupabaseClient()
+  const client = getSupabaseAdminClient()
 
   const { data: senders, error } = await client
     .from('senders')

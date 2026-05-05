@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 import { requireApiKey } from '@/lib/api-auth'
 import { encryptCredential } from '@/lib/crypto'
 
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { id } = req.query
   if (typeof id !== 'string') return res.status(400).json({ error: 'Invalid id' })
 
-  const client = getSupabaseClient()
+  const client = getSupabaseAdminClient()
 
   if (req.method === 'PUT') {
     const { name, email, credential_type, credential_json, daily_limit, timezone, status } = req.body

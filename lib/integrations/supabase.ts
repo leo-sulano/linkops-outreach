@@ -8,6 +8,7 @@ import {
 } from './errors'
 
 let supabaseClient: SupabaseClient | null = null
+let supabaseAdminClient: SupabaseClient | null = null
 
 export function getSupabaseClient(): SupabaseClient {
   if (!supabaseClient) {
@@ -21,6 +22,23 @@ export function getSupabaseClient(): SupabaseClient {
     supabaseClient = createClient(url, key)
   }
   return supabaseClient
+}
+
+// Uses service role key to bypass RLS — only call from server-side code
+export function getSupabaseAdminClient(): SupabaseClient {
+  if (!supabaseAdminClient) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!url || !key) {
+      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables')
+    }
+
+    supabaseAdminClient = createClient(url, key, {
+      auth: { persistSession: false },
+    })
+  }
+  return supabaseAdminClient
 }
 
 export interface Contact {

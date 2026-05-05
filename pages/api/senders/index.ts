@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 import { requireApiKey } from '@/lib/api-auth'
 import { encryptCredential } from '@/lib/crypto'
 
@@ -8,7 +8,7 @@ const PUBLIC_COLUMNS = 'id, name, email, credential_type, daily_limit, timezone,
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireApiKey(req, res)) return
 
-  const client = getSupabaseClient()
+  const client = getSupabaseAdminClient()
 
   if (req.method === 'GET') {
     const { data, error } = await client
