@@ -181,6 +181,8 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
               <div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={useAllSenders}
                   onClick={() => setUseAllSenders((v) => !v)}
                   disabled={modalState === 'sending'}
                   className="flex items-center gap-3 cursor-pointer disabled:opacity-50"
