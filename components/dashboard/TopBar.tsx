@@ -1,11 +1,12 @@
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, Send } from 'lucide-react';
 
 interface TopBarProps {
   onRefresh: () => void;
   isLoading?: boolean;
+  onSendCampaign: () => void;
 }
 
-export function TopBar({ onRefresh, isLoading = false }: TopBarProps) {
+export function TopBar({ onRefresh, isLoading = false, onSendCampaign }: TopBarProps) {
   return (
     <div className="bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div className="min-w-0">
@@ -18,6 +19,13 @@ export function TopBar({ onRefresh, isLoading = false }: TopBarProps) {
       </div>
 
       <div className="flex gap-3 flex-shrink-0">
+        <button
+          onClick={onSendCampaign}
+          className="flex items-center gap-2 px-4 py-2 border border-emerald-500/50 text-emerald-400 font-bold rounded-lg hover:bg-emerald-500/10 transition-colors text-sm"
+        >
+          <Send size={15} />
+          Send Campaign
+        </button>
         <button
           onClick={onRefresh}
           disabled={isLoading}
