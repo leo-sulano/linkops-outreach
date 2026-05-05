@@ -188,13 +188,13 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
                   className="flex items-center gap-3 cursor-pointer disabled:opacity-50"
                 >
                   <div
-                    className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
                       useAllSenders ? 'bg-emerald-500' : 'bg-slate-600'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                        useAllSenders ? 'translate-x-5' : 'translate-x-1'
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                        useAllSenders ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </div>
