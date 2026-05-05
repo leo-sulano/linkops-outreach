@@ -27,8 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'name, email, credential_type, credential_json are required' })
     }
 
-    if (credential_type !== 'service_account' && credential_type !== 'oauth') {
-      return res.status(400).json({ error: 'credential_type must be service_account or oauth' })
+    if (!['service_account', 'oauth', 'smtp'].includes(credential_type)) {
+      return res.status(400).json({ error: 'credential_type must be service_account, oauth, or smtp' })
     }
 
     const { data, error } = await client
