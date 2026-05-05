@@ -24,8 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { senderIds, emailsPerSender } = req.body
 
-  if (!senderIds || !emailsPerSender || typeof emailsPerSender !== 'number' || emailsPerSender < 1) {
-    return res.status(400).json({ error: 'senderIds and emailsPerSender (positive number) are required' })
+  if (!senderIds || (senderIds !== 'all' && !Array.isArray(senderIds)) || !emailsPerSender || typeof emailsPerSender !== 'number' || emailsPerSender < 1) {
+    return res.status(400).json({ error: 'senderIds must be "all" or an array of IDs, and emailsPerSender must be a positive number' })
   }
 
   const sheetId = process.env.GOOGLE_SHEET_ID
@@ -77,7 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (let i = 0; i < senders.length; i++) {
       const sender = senders[i]
-      const batch = contacts.slice(i * emailsPerSender, (i + 1) * emailsPerSender)
+      const remaining = Math.max(0, sender.daily_limit - sender.sent_today)
+      const limit = Math.min(emailsPerSender, remaining)
+      const batch = contacts.slice(i * emailsPerSender, i * emailsPerSender + limit)
       const senderResult: SenderResult = { sender: sender.email, sent: 0, errors: [] }
 
       for (const contact of batch) {
