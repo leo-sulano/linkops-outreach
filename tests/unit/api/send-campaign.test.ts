@@ -77,4 +77,130 @@ describe('POST /api/paul/send-campaign', () => {
     expect(status).toHaveBeenCalledWith(200)
     expect(json).toHaveBeenCalledWith(expect.objectContaining({ sent: 0 }))
   })
+
+  it('calls supabase insert with campaignName when contacts exist and emails send', async () => {
+    const { fetchContactsFromSheet, updateContactInSheet } = require('../../../lib/integrations/sheets')
+    fetchContactsFromSheet.mockResolvedValue([
+      { id: '1', email: 'a@x.com', status: 'start_outreach', domain: 'x.com', niche: 'tech', contact: 'Alice' },
+    ])
+    updateContactInSheet.mockResolvedValue(undefined)
+
+    const { sendOutreachWithSender } = require('../../../lib/senders/send')
+    sendOutreachWithSender.mockResolvedValue(undefined)
+
+    const insertMock = jest.fn().mockResolvedValue({ error: null })
+    const statBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { sent_count: 0 }, error: null }),
+    }
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'campaigns') return { insert: insertMock }
+      if (table === 'sender_daily_stats') return statBuilder
+      return {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [{ id: 's1', email: 'sender@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+        in: jest.fn().mockResolvedValue({
+          data: [{ id: 's1', email: 'sender@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+      }
+    })
+    const { getSupabaseClient } = require('../../../lib/integrations/supabase')
+    getSupabaseClient.mockReturnValue({ from: fromMock })
+
+    const { req, res, json } = makeReqRes({ senderIds: 'all', emailsPerSender: 10, campaignName: 'May Batch 1' })
+    await handler(req, res)
+
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'May Batch 1', sent: expect.any(Number), total: expect.any(Number) })
+    )
+  })
+
+  it('calls supabase insert with null name when campaignName is omitted', async () => {
+    const { fetchContactsFromSheet, updateContactInSheet } = require('../../../lib/integrations/sheets')
+    fetchContactsFromSheet.mockResolvedValue([
+      { id: '2', email: 'b@x.com', status: 'start_outreach', domain: 'x.com', niche: 'tech', contact: 'Bob' },
+    ])
+    updateContactInSheet.mockResolvedValue(undefined)
+
+    const { sendOutreachWithSender } = require('../../../lib/senders/send')
+    sendOutreachWithSender.mockResolvedValue(undefined)
+
+    const insertMock = jest.fn().mockResolvedValue({ error: null })
+    const statBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { sent_count: 0 }, error: null }),
+    }
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'campaigns') return { insert: insertMock }
+      if (table === 'sender_daily_stats') return statBuilder
+      return {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [{ id: 's2', email: 'sender2@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+        in: jest.fn().mockResolvedValue({
+          data: [{ id: 's2', email: 'sender2@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+      }
+    })
+    const { getSupabaseClient } = require('../../../lib/integrations/supabase')
+    getSupabaseClient.mockReturnValue({ from: fromMock })
+
+    const { req, res } = makeReqRes({ senderIds: 'all', emailsPerSender: 10 })
+    await handler(req, res)
+
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: null })
+    )
+  })
+
+  it('calls supabase insert with null name when campaignName is whitespace only', async () => {
+    const { fetchContactsFromSheet, updateContactInSheet } = require('../../../lib/integrations/sheets')
+    fetchContactsFromSheet.mockResolvedValue([
+      { id: '3', email: 'c@x.com', status: 'start_outreach', domain: 'x.com', niche: 'tech', contact: 'Carol' },
+    ])
+    updateContactInSheet.mockResolvedValue(undefined)
+
+    const { sendOutreachWithSender } = require('../../../lib/senders/send')
+    sendOutreachWithSender.mockResolvedValue(undefined)
+
+    const insertMock = jest.fn().mockResolvedValue({ error: null })
+    const statBuilder: any = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: { sent_count: 0 }, error: null }),
+    }
+    const fromMock = jest.fn((table: string) => {
+      if (table === 'campaigns') return { insert: insertMock }
+      if (table === 'sender_daily_stats') return statBuilder
+      return {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [{ id: 's3', email: 'sender3@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+        in: jest.fn().mockResolvedValue({
+          data: [{ id: 's3', email: 'sender3@x.com', status: 'active', daily_limit: 50, timezone: 'UTC', credential_json: '{}' }],
+          error: null,
+        }),
+      }
+    })
+    const { getSupabaseClient } = require('../../../lib/integrations/supabase')
+    getSupabaseClient.mockReturnValue({ from: fromMock })
+
+    const { req, res } = makeReqRes({ senderIds: 'all', emailsPerSender: 10, campaignName: '   ' })
+    await handler(req, res)
+
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: null })
+    )
+  })
 })

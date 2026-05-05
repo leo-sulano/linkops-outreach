@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!requireApiKey(req, res)) return
 
-  const { senderIds, emailsPerSender } = req.body
+  const { senderIds, emailsPerSender, campaignName } = req.body
 
   if (!senderIds || (senderIds !== 'all' && !Array.isArray(senderIds)) || !emailsPerSender || typeof emailsPerSender !== 'number' || emailsPerSender < 1) {
     return res.status(400).json({ error: 'senderIds must be "all" or an array of IDs, and emailsPerSender must be a positive number' })
@@ -101,6 +101,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       results.push(senderResult)
+    }
+
+    // Log campaign to Supabase — awaited so it completes before response on serverless
+    try {
+      await supabase
+        .from('campaigns')
+        .insert({
+          name: campaignName && typeof campaignName === 'string' && campaignName.trim() ? campaignName.trim() : null,
+          sent: totalSent,
+          total: totalAttempted,
+          results,
+        })
+    } catch (err: any) {
+      console.error('campaigns insert error:', err.message)
     }
 
     return res.status(200).json({
