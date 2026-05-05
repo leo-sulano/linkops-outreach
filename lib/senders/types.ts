@@ -1,4 +1,4 @@
-export type CredentialType = 'service_account' | 'oauth'
+export type CredentialType = 'service_account' | 'oauth' | 'smtp'
 export type SenderStatus = 'active' | 'inactive' | 'error'
 export type LogStatus = 'sent' | 'failed'
 
@@ -14,12 +14,22 @@ export interface ServiceAccountCredential {
   [key: string]: any
 }
 
+export interface OAuthCredential {
+  client_id: string
+  client_secret: string
+  refresh_token: string
+}
+
+export interface SmtpCredential {
+  app_password: string
+}
+
 export interface Sender {
   id: string
   name: string
   email: string
   credential_type: CredentialType
-  credential_json: ServiceAccountCredential
+  credential_json: ServiceAccountCredential | OAuthCredential | SmtpCredential | Record<string, any>
   daily_limit: number
   timezone: string
   status: SenderStatus

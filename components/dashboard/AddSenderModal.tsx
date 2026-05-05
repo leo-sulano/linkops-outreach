@@ -26,9 +26,7 @@ const TIMEZONES = [
 export function AddSenderModal({ isOpen, onClose, onSave, editing }: AddSenderModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [refreshToken, setRefreshToken] = useState('')
+  const [appPassword, setAppPassword] = useState('')
   const [dailyLimit, setDailyLimit] = useState(50)
   const [timezone, setTimezone] = useState('Europe/London')
   const [saving, setSaving] = useState(false)
@@ -40,15 +38,11 @@ export function AddSenderModal({ isOpen, onClose, onSave, editing }: AddSenderMo
       setEmail(editing.email)
       setDailyLimit(editing.daily_limit)
       setTimezone(editing.timezone)
-      setClientId('')
-      setClientSecret('')
-      setRefreshToken('')
+      setAppPassword('')
     } else {
       setName('')
       setEmail('')
-      setClientId('')
-      setClientSecret('')
-      setRefreshToken('')
+      setAppPassword('')
       setDailyLimit(50)
       setTimezone('Europe/London')
     }
@@ -59,28 +53,17 @@ export function AddSenderModal({ isOpen, onClose, onSave, editing }: AddSenderMo
     e.preventDefault()
     setError(null)
 
-    const hasCredentials = clientId.trim() || clientSecret.trim() || refreshToken.trim()
-
-    if (!editing && !hasCredentials) {
-      setError('Client ID, Client Secret, and Refresh Token are required')
-      return
-    }
-
-    if (hasCredentials && (!clientId.trim() || !clientSecret.trim() || !refreshToken.trim())) {
-      setError('All three OAuth2 fields are required: Client ID, Client Secret, Refresh Token')
+    if (!editing && !appPassword.trim()) {
+      setError('App Password is required')
       return
     }
 
     setSaving(true)
     try {
       const payload: any = { name, email, daily_limit: dailyLimit, timezone }
-      if (hasCredentials) {
-        payload.credential_type = 'oauth'
-        payload.credential_json = {
-          client_id: clientId.trim(),
-          client_secret: clientSecret.trim(),
-          refresh_token: refreshToken.trim(),
-        }
+      if (appPassword.trim()) {
+        payload.credential_type = 'smtp'
+        payload.credential_json = { app_password: appPassword.trim() }
       }
       await onSave(payload)
       onClose()
@@ -157,40 +140,20 @@ export function AddSenderModal({ isOpen, onClose, onSave, editing }: AddSenderMo
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="text-xs font-mono text-slate-500 uppercase tracking-widest">
-              Gmail OAuth2 {editing && <span className="text-slate-600 normal-case">(leave blank to keep existing)</span>}
-            </div>
-            <div>
-              <label className="block text-xs font-mono text-slate-500 mb-1">Client ID</label>
-              <input
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                placeholder="123456789-abc.apps.googleusercontent.com"
-                className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 placeholder-slate-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-mono text-slate-500 mb-1">Client Secret</label>
-              <input
-                type="password"
-                value={clientSecret}
-                onChange={(e) => setClientSecret(e.target.value)}
-                placeholder="GOCSPX-..."
-                className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 placeholder-slate-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-mono text-slate-500 mb-1">Refresh Token</label>
-              <input
-                type="password"
-                value={refreshToken}
-                onChange={(e) => setRefreshToken(e.target.value)}
-                placeholder="1//0g..."
-                className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 placeholder-slate-500 font-mono"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-mono text-slate-500 mb-1">
+              Gmail App Password {editing && <span className="text-slate-600">(leave blank to keep existing)</span>}
+            </label>
+            <input
+              type="password"
+              value={appPassword}
+              onChange={(e) => setAppPassword(e.target.value)}
+              placeholder="xxxx xxxx xxxx xxxx"
+              className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm text-slate-100 placeholder-slate-500 font-mono tracking-widest"
+            />
+            <p className="text-xs text-slate-600 mt-1">
+              Google Account → Security → 2-Step Verification → App passwords
+            </p>
           </div>
 
           {error && (

@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '@/lib/integrations/supabase'
-import { buildGmailClient, sendWithClient } from './gmail'
+import { sendEmail } from './gmail'
 import { pickSender, getLocalDate } from './rotate'
 import { SenderAuthError } from './errors'
 import { updateContactInSheet } from '@/lib/integrations/sheets'
@@ -17,8 +17,7 @@ export async function sendOutreach(
   let messageId: string
 
   try {
-    const gmail = buildGmailClient(sender)
-    messageId = await sendWithClient(gmail, contact.email, subject, body, sender.email)
+    messageId = await sendEmail(sender, contact.email, subject, body)
   } catch (err: any) {
     // Log failure
     await client.from('outreach_logs').insert([{
@@ -98,8 +97,7 @@ export async function sendOutreachWithSender(
   let messageId: string
 
   try {
-    const gmail = buildGmailClient(sender)
-    messageId = await sendWithClient(gmail, contact.email, subject, body, sender.email)
+    messageId = await sendEmail(sender, contact.email, subject, body)
   } catch (err: any) {
     await client.from('outreach_logs').insert([{
       sender_id: sender.id,
