@@ -41,7 +41,10 @@
       "Bash(cp \"C:/Users/Leo/AppData/Local/Temp/rtk_extracted/rtk.exe\" \"C:/Users/Leo/AppData/Roaming/npm/rtk.exe\")",
       "Bash(rtk --version)",
       "Bash(rtk git *)",
-      "Bash(rtk init *)"
+      "Bash(rtk init *)",
+      "Bash(rtk cat *)",
+      "Bash(xargs grep *)",
+      "Bash(git stash *)"
     ]
   }
 }
