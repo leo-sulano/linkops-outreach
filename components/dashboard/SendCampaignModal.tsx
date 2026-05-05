@@ -31,6 +31,7 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
   const [emailsPerSender, setEmailsPerSender] = useState(10)
   const [results, setResults] = useState<CampaignResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [campaignName, setCampaignName] = useState('')
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -73,7 +74,7 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
       const res = await fetch('/api/paul/send-campaign', {
         method: 'POST',
         headers: { ...API_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderIds, emailsPerSender }),
+        body: JSON.stringify({ senderIds, emailsPerSender, campaignName: campaignName.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -124,7 +125,9 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
               <div className="flex items-center gap-3">
                 <CheckCircle2 size={20} className="text-emerald-400 flex-shrink-0" />
                 <p className="text-slate-100 font-bold">
-                  Campaign sent — {results.sent} of {results.total} emails delivered
+                  {campaignName.trim()
+                    ? `Campaign sent — "${campaignName.trim()}" — ${results.sent} of ${results.total} emails delivered`
+                    : `Campaign sent — ${results.sent} of ${results.total} emails delivered`}
                 </p>
               </div>
 
@@ -176,6 +179,21 @@ export function SendCampaignModal({ onClose, onRefresh }: SendCampaignModalProps
                   {error}
                 </div>
               )}
+
+              {/* Campaign name */}
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5 font-medium">
+                  Campaign name <span className="text-slate-600">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. May Batch 1"
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  disabled={modalState === 'sending'}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 placeholder:text-slate-600"
+                />
+              </div>
 
               {/* Sender toggle */}
               <div>
