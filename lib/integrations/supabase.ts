@@ -346,6 +346,25 @@ export async function updateSheetContact(rowIndex: number, contact: SheetContact
   if (error) console.error('sheet_contacts update error:', error.message)
 }
 
+export async function getSheetContactByEmail(
+  email: string
+): Promise<{ rowIndex: number; contact: SheetContact } | null> {
+  if (!email) return null
+  const client = getSupabaseClient()
+  const { data, error } = await client
+    .from('sheet_contacts')
+    .select('row_index, data')
+    .eq('data->>email', email)
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    console.error('getSheetContactByEmail error:', error.message)
+    return null
+  }
+  if (!data) return null
+  return { rowIndex: (data as any).row_index, contact: (data as any).data as SheetContact }
+}
+
 export async function createMetadata(
   contactId: string,
   data: Partial<ContactMetadata>
