@@ -3,7 +3,7 @@ import { fetchContactsFromSheet, updateContactInSheet } from '@/lib/integrations
 import { getMockSubject, getMockBody } from '@/lib/mocks/paulResponses'
 import { sendOutreachWithSender } from '@/lib/senders/send'
 import { requireApiKey } from '@/lib/api-auth'
-import { getSupabaseClient } from '@/lib/integrations/supabase'
+import { getSupabaseClient, updateSheetContact } from '@/lib/integrations/supabase'
 import { decryptCredential } from '@/lib/crypto'
 import { getLocalDate } from '@/lib/senders/rotate'
 import type { Sender } from '@/lib/senders/types'
@@ -90,8 +90,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           await sendOutreachWithSender(sender, contact, subject, body)
 
-          const rowIndex = parseInt(contact.id, 10) - 1
-          await updateContactInSheet(sheetId, rowIndex, { status: 'outreach_sent' }, sheetTab)
+          const supabaseRowIndex = parseInt(contact.id, 10)
+          await updateContactInSheet(sheetId, supabaseRowIndex, { status: 'outreach_sent' }, sheetTab)
+          updateSheetContact(supabaseRowIndex, { ...contact, status: 'outreach_sent' })
+            .catch(err => console.error('Supabase cache update failed for', contact.domain, err.message))
 
           senderResult.sent++
           totalSent++
