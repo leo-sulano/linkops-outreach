@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getEmailBody, verifyWebhookSignature } from '@/lib/integrations/gmail'
-import { createMessage, getContact } from '@/lib/integrations/supabase'
+import { createMessage, getContact, getSheetContactByEmail, updateSheetContact } from '@/lib/integrations/supabase'
+import { updateContactInSheet } from '@/lib/integrations/sheets'
 import { NotFoundError } from '@/lib/integrations/errors'
 import { requireApiKey } from '@/lib/api-auth'
 
@@ -60,6 +61,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         gmail_message_id: emailMessage.id,
         sent_at: new Date().toISOString(),
       })
+    }
+
+    const sheetRecord = await getSheetContactByEmail(senderEmail)
+    if (sheetRecord) {
+      const { rowIndex, contact: sheetContact } = sheetRecord
+      const updated = { ...sheetContact, status: 'response_received' as const }
+      const sheetId = process.env.GOOGLE_SHEET_ID
+      const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1'
+      await Promise.all([
+        updateSheetContact(rowIndex, updated),
+        sheetId
+          ? updateContactInSheet(sheetId, rowIndex, { status: 'response_received' }, sheetTab)
+          : Promise.resolve(),
+      ])
     }
 
     return res.status(200).json({
