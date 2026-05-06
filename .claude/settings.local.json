@@ -46,7 +46,12 @@
       "Bash(xargs grep *)",
       "Bash(git stash *)",
       "Bash(git push *)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Read(//c/Users/Leo/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/**)",
+      "Read(//c/Users/Leo/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/requesting-code-review/**)",
+      "WebFetch(domain:example.com)",
+      "Bash(rtk tsc *)",
+      "Bash(npm test *)"
     ]
   }
 }
