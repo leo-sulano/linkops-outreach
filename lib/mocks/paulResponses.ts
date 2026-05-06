@@ -143,3 +143,45 @@ export function getMockBody(category: string, domain: string, niche: string, pub
 
   return body;
 }
+
+export const FOLLOWUP_TEMPLATES = {
+  subject: [
+    'Following up — link partnership for {domain}',
+    'Quick follow-up: {niche} collaboration',
+    'Still interested? — {domain} partnership',
+    'Just checking in re: our {niche} proposal',
+  ],
+  body: [
+    `Hi {publisherName},
+
+I wanted to follow up on my previous email about a link partnership for {domain}.
+
+We'd love to collaborate if you're open to it — even a quick yes or no would be appreciated.
+
+Best regards`,
+
+    `Hello {publisherName},
+
+Following up on my earlier outreach regarding a potential {niche} partnership with {domain}.
+
+Is this something you'd be interested in exploring?
+
+Best regards`,
+  ],
+};
+
+export function getMockFollowupSubject(domain: string, niche: string, publisherName?: string): string {
+  const template = FOLLOWUP_TEMPLATES.subject[Math.floor(Math.random() * FOLLOWUP_TEMPLATES.subject.length)];
+  return template
+    .replace(/\{domain\}/g, domain)
+    .replace(/\{niche\}/g, niche)
+    .replace(/\{publisherName\}/g, publisherName || 'there');
+}
+
+export function getMockFollowupBody(domain: string, niche: string, publisherName?: string): string {
+  const template = FOLLOWUP_TEMPLATES.body[Math.floor(Math.random() * FOLLOWUP_TEMPLATES.body.length)];
+  return template
+    .replace(/\{domain\}/g, domain)
+    .replace(/\{niche\}/g, niche)
+    .replace(/\{publisherName\}/g, publisherName || 'there');
+}
