@@ -10,6 +10,7 @@ import { ContactTable } from '@/components/dashboard/ContactTable';
 import { CountryFilter } from '@/components/dashboard/CountryFilter';
 import { AllContactsModal } from '@/components/dashboard/AllContactsModal';
 import { SendCampaignModal } from '@/components/dashboard/SendCampaignModal';
+import { SendFollowupModal } from '@/components/dashboard/SendFollowupModal';
 
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [showSendCampaign, setShowSendCampaign] = useState(false);
+  const [showSendFollowup, setShowSendFollowup] = useState(false);
 
   const metrics: DashboardMetrics = useMemo(() => {
     const total = contacts.length;
@@ -175,6 +177,8 @@ export default function DashboardPage() {
           onRefresh={syncFromSheet}
           isLoading={isSyncing}
           onSendCampaign={() => setShowSendCampaign(true)}
+          onSendFollowup={() => setShowSendFollowup(true)}
+          followupCount={navCounts.sendFollowup}
         />
 
         <div className="flex-1 overflow-y-auto">
@@ -233,6 +237,14 @@ export default function DashboardPage() {
       {showSendCampaign && (
         <SendCampaignModal
           onClose={() => setShowSendCampaign(false)}
+          onRefresh={loadFromSupabase}
+        />
+      )}
+
+      {showSendFollowup && (
+        <SendFollowupModal
+          followupCount={navCounts.sendFollowup}
+          onClose={() => setShowSendFollowup(false)}
           onRefresh={loadFromSupabase}
         />
       )}

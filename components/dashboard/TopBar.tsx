@@ -1,12 +1,14 @@
-import { RefreshCw, Loader2, Send } from 'lucide-react';
+import { RefreshCw, Loader2, Send, Reply } from 'lucide-react';
 
 interface TopBarProps {
   onRefresh: () => void;
   isLoading?: boolean;
   onSendCampaign: () => void;
+  onSendFollowup: () => void;
+  followupCount?: number;
 }
 
-export function TopBar({ onRefresh, isLoading = false, onSendCampaign }: TopBarProps) {
+export function TopBar({ onRefresh, isLoading = false, onSendCampaign, onSendFollowup, followupCount = 0 }: TopBarProps) {
   return (
     <div className="bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div className="min-w-0">
@@ -19,6 +21,18 @@ export function TopBar({ onRefresh, isLoading = false, onSendCampaign }: TopBarP
       </div>
 
       <div className="flex gap-3 flex-shrink-0">
+        {followupCount > 0 && (
+          <button
+            onClick={onSendFollowup}
+            className="relative flex items-center gap-2 px-4 py-2 border border-amber-500/50 text-amber-400 font-bold rounded-lg hover:bg-amber-500/10 transition-colors text-sm"
+          >
+            <Reply size={15} />
+            Send Follow-up
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-black text-[10px] font-black px-1">
+              {followupCount}
+            </span>
+          </button>
+        )}
         <button
           onClick={onSendCampaign}
           className="flex items-center gap-2 px-4 py-2 border border-emerald-500/50 text-emerald-400 font-bold rounded-lg hover:bg-emerald-500/10 transition-colors text-sm"
