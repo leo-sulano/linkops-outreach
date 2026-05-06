@@ -1,6 +1,9 @@
 import type { Contact, PipelineStatus } from '@/components/dashboard/types'
 
 const MANUAL_STAGES: PipelineStatus[] = [
+  'outreach_sent',
+  'send_followup',
+  'response_received',
   'under_negotiation',
   'negotiated',
   'approved',
