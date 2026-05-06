@@ -58,6 +58,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const supabase = getSupabaseClient()
+
+    // Cross-reference Supabase cache to skip contacts already sent a follow-up this session
+    const rowIndexes = contacts.map(c => parseInt(c.id, 10))
+    const { data: cachedRows } = await supabase
+      .from('sheet_contacts')
+      .select('row_index, data')
+      .in('row_index', rowIndexes)
+
+    const alreadySentIndexes = new Set<number>(
+      ((cachedRows || []) as Array<{ row_index: number; data: any }>)
+        .filter(row => row.data?.status === 'outreach_sent')
+        .map(row => row.row_index)
+    )
+
+    const contactsToSend = contacts.filter(c => !alreadySentIndexes.has(parseInt(c.id, 10)))
+
+    if (contactsToSend.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No contacts ready for follow-up',
+        sent: 0,
+        total: 0,
+        results: [],
+      })
+    }
+
     let sendersQuery = supabase.from('senders').select('*').eq('status', 'active')
     if (senderIds !== 'all') {
       sendersQuery = (sendersQuery as any).in('id', senderIds)
@@ -93,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sender = senders[i]
       const remaining = Math.max(0, sender.daily_limit - sender.sent_today)
       const limit = Math.min(emailsPerSender, remaining)
-      const batch = contacts.slice(i * emailsPerSender, i * emailsPerSender + limit)
+      const batch = contactsToSend.slice(i * emailsPerSender, i * emailsPerSender + limit)
       const senderResult: SenderResult = { sender: sender.email, sent: 0, errors: [] }
 
       for (const contact of batch) {
@@ -106,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           const supabaseRowIndex = parseInt(contact.id, 10)
           await updateContactInSheet(sheetId, supabaseRowIndex, { status: 'send_followup' }, sheetTab)
-          updateSheetContact(supabaseRowIndex, { ...contact, status: 'send_followup' })
+          updateSheetContact(supabaseRowIndex, { ...contact, status: 'outreach_sent' })
             .catch(err => console.error('Supabase cache update failed for', contact.domain, err.message))
 
           senderResult.sent++
