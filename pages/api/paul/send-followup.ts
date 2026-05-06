@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const alreadySentIndexes = new Set<number>(
       ((cachedRows || []) as Array<{ row_index: number; data: any }>)
-        .filter(row => row.data?.status === 'outreach_sent')
+        .filter(row => row.data?.status === 'outreach_sent' || row.data?.status === 'send_followup')
         .map(row => row.row_index)
     )
 

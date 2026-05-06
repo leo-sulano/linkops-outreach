@@ -238,7 +238,7 @@ export async function updateContactInSheet(
       },
     })
 
-    console.log(`✓ Updated row ${rowIndex + 1} in Sheet`)
+    console.log(`✓ Updated row ${rowIndex} in Sheet`)
   } catch (error: any) {
     console.error('Error updating contact in Sheet:', error)
     throw new Error(`Failed to update Sheet: ${error.message}`)

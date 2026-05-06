@@ -36,7 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Email message not found' })
     }
 
-    const senderEmail = emailMessage.from
+    const rawFrom = emailMessage.from
+    const fromMatch = rawFrom.match(/<([^>]+)>/)
+    const senderEmail = fromMatch ? fromMatch[1] : rawFrom
     const senderDomain = senderEmail.split('@')[1]
 
     let contact
