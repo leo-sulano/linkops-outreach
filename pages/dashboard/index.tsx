@@ -1,6 +1,4 @@
-'use client';
-
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Contact, DashboardMetrics, NavCounts, PipelineStatus } from '@/components/dashboard/types';
 import { deriveStatus } from '@/lib/utils/deriveStatus';
 import { Sidebar } from '@/components/dashboard/Sidebar';
@@ -11,6 +9,8 @@ import { CountryFilter } from '@/components/dashboard/CountryFilter';
 import { AllContactsModal } from '@/components/dashboard/AllContactsModal';
 import { SendCampaignModal } from '@/components/dashboard/SendCampaignModal';
 import { SendFollowupModal } from '@/components/dashboard/SendFollowupModal';
+import { fetchContactsFromSheet } from '@/lib/integrations/sheets';
+import { upsertSheetContacts, getSheetContacts } from '@/lib/integrations/supabase';
 
 const STAGE_TO_STATUS: Record<string, PipelineStatus | null> = {
   all: null,
@@ -40,8 +40,21 @@ const STAGE_LABELS: Record<string, string> = {
 
 const API_HEADERS = { 'x-api-key': process.env.NEXT_PUBLIC_API_SECRET_KEY || '' };
 
-export default function DashboardPage() {
-  const [contacts, setContacts] = useState<Contact[]>([]);
+export async function getServerSideProps() {
+  const sheetId = process.env.GOOGLE_SHEET_ID || '';
+  const sheetTab = process.env.GOOGLE_SHEET_TAB || 'Sheet1';
+  try {
+    const contacts = await fetchContactsFromSheet(sheetId, sheetTab);
+    await upsertSheetContacts(contacts);
+    return { props: { initialContacts: contacts } };
+  } catch {
+    const contacts = await getSheetContacts();
+    return { props: { initialContacts: contacts } };
+  }
+}
+
+export default function DashboardPage({ initialContacts }: { initialContacts: Contact[] }) {
+  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('all');
@@ -95,7 +108,7 @@ export default function DashboardPage() {
     return result;
   }, [contacts, selectedStage, selectedCountry]);
 
-  // Load from Supabase on mount — fast, no Google API call
+  // Used by modal onRefresh callbacks after send actions
   const loadFromSupabase = async () => {
     setIsLoading(true);
     setError(null);
@@ -114,7 +127,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Sync from Google Sheet → upsert Supabase → update dashboard
+  // Manual mid-session sync from Google Sheet
   const syncFromSheet = async () => {
     setIsSyncing(true);
     setError(null);
@@ -157,11 +170,6 @@ export default function DashboardPage() {
   const handleDeleteContact = (contactId: string) => {
     setContacts(prev => prev.filter(c => c.id !== contactId));
   };
-
-  // On mount: load saved data from Supabase immediately
-  useEffect(() => {
-    loadFromSupabase();
-  }, []);
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
