@@ -246,7 +246,7 @@ export function EditContactModal({ contact, onClose, onSave, onDelete }: EditCon
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-slate-700 flex-shrink-0">
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-slate-700 flex-shrink-0 flex-wrap">
           <button
             onClick={handleSave}
             disabled={saving}
@@ -257,6 +257,34 @@ export function EditContactModal({ contact, onClose, onSave, onDelete }: EditCon
           <button onClick={onClose} className="px-4 py-2 bg-slate-700 text-slate-100 font-bold rounded-lg hover:bg-slate-600 transition-colors text-sm">
             Cancel
           </button>
+          {effectiveStatus === 'response_received' && (
+            <button
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true)
+                await onSave({ ...edited, status: 'under_negotiation' })
+                setSaving(false)
+                onClose()
+              }}
+              className="px-4 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-500 disabled:opacity-60 transition-colors text-sm"
+            >
+              Start Negotiation
+            </button>
+          )}
+          {effectiveStatus === 'under_negotiation' && (
+            <button
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true)
+                await onSave({ ...edited, status: 'negotiated' })
+                setSaving(false)
+                onClose()
+              }}
+              className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-500 disabled:opacity-60 transition-colors text-sm"
+            >
+              Mark as Negotiated
+            </button>
+          )}
           <button onClick={handleDelete} className="px-4 py-2 bg-red-600/20 text-red-400 font-bold rounded-lg hover:bg-red-600/30 transition-colors text-sm border border-red-500/20 ml-auto">
             Delete
           </button>
