@@ -39,3 +39,5 @@ google-creds.json
 .agent/
 .claude/worktrees/
 .claude/settings.local.json
+
+.vercel
