@@ -14,22 +14,25 @@ export default function ContactsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (search) params.set('search', search)
-    if (vertical) params.set('vertical', vertical)
-    params.set('page', String(page))
-    params.set('perPage', '50')
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      if (vertical) params.set('vertical', vertical)
+      params.set('page', String(page))
+      params.set('perPage', '50')
 
-    setLoading(true)
-    fetch(`/api/leads/contacts?${params}`, { headers: { 'x-api-key': API_KEY } })
-      .then((r) => r.json())
-      .then((data) => {
-        setContacts(data.contacts ?? [])
-        setTotal(data.total ?? 0)
-        setError(null)
-      })
-      .catch(() => setError('Failed to load contacts'))
-      .finally(() => setLoading(false))
+      setLoading(true)
+      fetch(`/api/leads/contacts?${params}`, { headers: { 'x-api-key': API_KEY } })
+        .then((r) => r.json())
+        .then((data) => {
+          setContacts(data.contacts ?? [])
+          setTotal(data.total ?? 0)
+          setError(null)
+        })
+        .catch(() => setError('Failed to load contacts'))
+        .finally(() => setLoading(false))
+    }, 300)
+    return () => clearTimeout(timer)
   }, [search, vertical, page])
 
   function handleSearch(v: string) { setSearch(v); setPage(1) }

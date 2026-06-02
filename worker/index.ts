@@ -119,6 +119,7 @@ async function processJob(job: {
         error_log: msg,
       })
       .eq('id', job.id)
+      .eq('status', 'processing')
   }
 }
 

@@ -45,5 +45,12 @@ export function extractEmail(html: string): string | null {
 export function extractLinkedInCompany(links: string[]): string | null {
   const companyLinks = links.filter((l) => /linkedin\.com\/company\//i.test(l))
   if (companyLinks.length === 0) return null
-  return companyLinks.sort((a, b) => b.length - a.length)[0]
+  function slugLength(url: string): number {
+    try {
+      return new URL(url).pathname.length
+    } catch {
+      return url.split('?')[0].length
+    }
+  }
+  return companyLinks.sort((a, b) => slugLength(b) - slugLength(a))[0]
 }

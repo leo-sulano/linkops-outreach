@@ -131,12 +131,12 @@ export async function getOutreachReady(): Promise<LeadContact[]> {
 export async function getLeadStats(): Promise<LeadStats> {
   const sb = getSupabaseAdminClient()
   const [
-    { count: totalLeads },
-    { count: totalContacts },
-    { count: newLeads },
-    { count: affiliates },
-    { count: needsReview },
-    { count: outreachReady },
+    { count: totalLeads, error: e1 },
+    { count: totalContacts, error: e2 },
+    { count: newLeads, error: e3 },
+    { count: affiliates, error: e4 },
+    { count: needsReview, error: e5 },
+    { count: outreachReady, error: e6 },
   ] = await Promise.all([
     sb.from('leads').select('*', { count: 'exact', head: true }),
     sb.from('lead_contacts').select('*', { count: 'exact', head: true }),
@@ -148,6 +148,8 @@ export async function getLeadStats(): Promise<LeadStats> {
       .select('*', { count: 'exact', head: true })
       .not('company_name', 'is', null),
   ])
+  const firstError = e1 ?? e2 ?? e3 ?? e4 ?? e5 ?? e6
+  if (firstError) throw new Error(`getLeadStats: ${firstError.message}`)
   return {
     totalLeads: totalLeads ?? 0,
     totalContacts: totalContacts ?? 0,
