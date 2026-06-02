@@ -7,7 +7,7 @@ function CopyButton({ value }: { value: string | null }) {
   if (!value) return <span className="text-slate-600 text-xs">—</span>
 
   function handleCopy() {
-    navigator.clipboard.writeText(value)
+    navigator.clipboard.writeText(value!)
     setCopied(true)
     setTimeout(() => setCopied(false), 2_000)
   }
