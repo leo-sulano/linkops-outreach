@@ -13,6 +13,10 @@ import {
   Inbox,
   FileText,
   Users,
+  Search,
+  Users2,
+  Zap,
+  BarChart2,
 } from 'lucide-react';
 import { NavCounts } from './types';
 
@@ -42,6 +46,13 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage, onAll
     { label: 'Link Tracker', href: '#', icon: Link },
     { label: 'Inbox Monitor', href: '#', icon: Inbox },
     { label: 'Outreach Templates', href: '#', icon: FileText },
+  ];
+
+  const leadsItems = [
+    { label: 'Overview', href: '/leads', icon: BarChart2 },
+    { label: 'New Leads', href: '/leads/new-leads', icon: Search },
+    { label: 'Contacts', href: '/leads/contacts', icon: Users2 },
+    { label: 'Outreach Ready', href: '/leads/outreach-ready', icon: Zap },
   ];
 
   return (
@@ -107,6 +118,23 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage, onAll
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Leads Research */}
+        <div className="px-3 py-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 px-2">
+            Leads
+          </p>
+          {leadsItems.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+            >
+              <item.icon size={15} />
+              {item.label}
+            </a>
+          ))}
         </div>
 
         {/* Tools Section */}
