@@ -31,7 +31,7 @@ export default function Home() {
                         </a>
                     </div>
 
-                    <div id="features" className="mt-20 grid md:grid-cols-3 gap-8">
+                    <div id="features" className="mt-20 grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <div className="bg-slate-700 p-6 rounded-lg">
                             <h3 className="text-xl font-bold mb-3">Paul AI Agent</h3>
                             <p className="text-slate-300">
@@ -52,6 +52,13 @@ export default function Home() {
                                 Track negotiations, closed deals, and link placements
                             </p>
                         </div>
+
+                        <Link href="/leads" className="bg-slate-700 hover:bg-slate-600 p-6 rounded-lg text-left transition">
+                            <h3 className="text-xl font-bold mb-3">Leads Research</h3>
+                            <p className="text-slate-300">
+                                Auto-enrich affiliate leads with company info, emails, and LinkedIn contacts
+                            </p>
+                        </Link>
                     </div>
                 </div>
             </div>
