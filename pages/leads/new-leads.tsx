@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { GetServerSideProps } from 'next'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { ProcessingModal } from '@/components/leads/ProcessingModal'
-import { getNewLeads } from '@/lib/leads/repository'
+import { readLeadsSheet } from '@/lib/leads/sheets-service'
+import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
 const API_HEADERS = {
   'x-api-key': process.env.NEXT_PUBLIC_API_SECRET_KEY || '',
@@ -17,7 +18,34 @@ interface NewLead {
 
 export const getServerSideProps: GetServerSideProps = async () => {
   try {
-    const leads = await getNewLeads()
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID!
+    const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
+
+    // Read sheet — only Affiliates where Data Collected is not Done
+    const sheetLeads = await readLeadsSheet(spreadsheetId, leadsTab)
+    const pending = sheetLeads.filter(
+      (l) =>
+        l.type === 'Affiliate' &&
+        (!l.data_collected || l.data_collected.trim().toLowerCase() !== 'done')
+    )
+
+    if (pending.length === 0) return { props: { initialLeads: [] } }
+
+    // Get job statuses from Supabase for these domains
+    const sb = getSupabaseAdminClient()
+    const { data: jobs } = await sb
+      .from('lead_jobs')
+      .select('domain, status')
+      .in('domain', pending.map((l) => l.domain))
+
+    const jobMap = new Map((jobs ?? []).map((j) => [j.domain, j.status]))
+
+    const leads: NewLead[] = pending.map((l) => ({
+      domain: l.domain,
+      vertical: l.vertical,
+      status: jobMap.get(l.domain) ?? 'unprocessed',
+    }))
+
     return { props: { initialLeads: leads } }
   } catch {
     return { props: { initialLeads: [] } }
