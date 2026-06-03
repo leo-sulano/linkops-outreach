@@ -26,11 +26,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [processing, setProcessing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  const [isVercel, setIsVercel] = useState(false)
+
   const checkWorker = useCallback(async () => {
     try {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
+      if (data.vercel) setIsVercel(true)
     } catch { /* ignore */ }
   }, [])
 
@@ -62,6 +65,10 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   }
 
   async function toggleWorker() {
+    if (isVercel) {
+      setMessage('⚠ Worker runs locally. Open a terminal and run: cd worker && npm start')
+      return
+    }
     const action = workerRunning ? 'stop' : 'start'
     setProcessing(true)
     setMessage(null)
