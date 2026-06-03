@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
 import { extractCompanyName, extractEmail, extractLinkedInCompany } from '../lib/leads/enrichment'
-import { appendContactsToSheet } from '../lib/leads/sheets-service'
+import { updateSingleContactInSheet } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
@@ -93,10 +93,10 @@ async function processJob(job: {
 
     await sb.from('lead_contacts').upsert(contact, { onConflict: 'domain' })
 
-    await appendContactsToSheet(
+    await updateSingleContactInSheet(
       process.env.GOOGLE_SHEET_ID!,
       process.env.GOOGLE_CONTACTS_SHEET_TAB || 'Contacts',
-      [contact]
+      contact
     )
 
     const finalStatus = company_name ? 'completed' : 'needs_review'

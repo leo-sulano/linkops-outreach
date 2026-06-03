@@ -71,34 +71,91 @@ export async function readLeadsSheet(
     }))
 }
 
-// Columns: domain(A) vertical(B) company_type(C) company_name(D) company_email(E)
-//          company_linkedin(F) contact_name(G) contact_role(H) contact_linkedin(I)
-//          new_lead(J) emailed(K) contacted(L)
-export async function appendContactsToSheet(
+// Contacts sheet layout: domain(A) [B–C unused] company_name(D) company_email(E) company_linkedin(F)
+// Column A is formula-driven (=Leads!D[row]) — rows auto-exist, we update D:F only.
+
+function normalizeDomain(raw: string): string {
+  return String(raw).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
+async function buildDomainRowMap(
+  sheets: ReturnType<typeof google.sheets>,
+  spreadsheetId: string,
+  tab: string
+): Promise<Map<string, number>> {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${tab}!A:A`,
+  })
+  const rows = res.data.values ?? []
+  const map = new Map<string, number>()
+  for (let i = 1; i < rows.length; i++) {
+    const raw = rows[i]?.[0]
+    if (!raw) continue
+    map.set(normalizeDomain(raw), i + 1) // 1-indexed sheet row
+  }
+  return map
+}
+
+// Update a single contact's enrichment columns (D:F) by matching domain in column A.
+// Returns true if the domain was found and updated.
+export async function updateSingleContactInSheet(
+  spreadsheetId: string,
+  tab: string,
+  contact: SheetContact
+): Promise<boolean> {
+  const sheets = getSheetsClient()
+  const domainToRow = await buildDomainRowMap(sheets, spreadsheetId, tab)
+  const row = domainToRow.get(contact.domain)
+  if (!row) return false
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${tab}!D${row}:F${row}`,
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [[
+        contact.company_name ?? '',
+        contact.company_email ?? '',
+        contact.company_linkedin ?? '',
+      ]],
+    },
+  })
+  return true
+}
+
+// Batch-update enrichment columns (D:F) for many contacts in one API call.
+export async function updateContactsInSheet(
   spreadsheetId: string,
   tab: string,
   contacts: SheetContact[]
-): Promise<void> {
-  if (contacts.length === 0) return
+): Promise<{ updated: number; notFound: number }> {
+  if (contacts.length === 0) return { updated: 0, notFound: 0 }
   const sheets = getSheetsClient()
-  const values = contacts.map((c) => [
-    c.domain,
-    c.vertical ?? '',
-    c.company_type ?? '',
-    c.company_name ?? '',
-    c.company_email ?? '',
-    c.company_linkedin ?? '',
-    c.contact_name ?? '',
-    c.contact_role ?? '',
-    c.contact_linkedin ?? '',
-    'TRUE',
-    'FALSE',
-    'FALSE',
-  ])
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: `${tab}!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values },
-  })
+  const domainToRow = await buildDomainRowMap(sheets, spreadsheetId, tab)
+
+  const data: { range: string; values: string[][] }[] = []
+  let notFound = 0
+
+  for (const c of contacts) {
+    const row = domainToRow.get(c.domain)
+    if (!row) { notFound++; continue }
+    data.push({
+      range: `${tab}!D${row}:F${row}`,
+      values: [[
+        c.company_name ?? '',
+        c.company_email ?? '',
+        c.company_linkedin ?? '',
+      ]],
+    })
+  }
+
+  if (data.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: { valueInputOption: 'RAW', data },
+    })
+  }
+
+  return { updated: data.length, notFound }
 }
