@@ -71,8 +71,9 @@ export async function readLeadsSheet(
     }))
 }
 
-// Contacts sheet layout: domain(A) [B–C unused] company_name(D) company_email(E) company_linkedin(F)
+// Contacts sheet layout: domain(A) vertical(B) company_type(C) company_name(D) company_email(E) company_linkedin(F)
 // Column A is formula-driven (=Leads!D[row]) — rows auto-exist, we update D:F only.
+// Column F = company LinkedIn if found, else CEO/owner LinkedIn as fallback.
 
 function normalizeDomain(raw: string): string {
   return String(raw).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '')
@@ -117,7 +118,7 @@ export async function updateSingleContactInSheet(
       values: [[
         contact.company_name ?? '',
         contact.company_email ?? '',
-        contact.company_linkedin ?? '',
+        contact.company_linkedin ?? contact.contact_linkedin ?? '',
       ]],
     },
   })
@@ -145,7 +146,7 @@ export async function updateContactsInSheet(
       values: [[
         c.company_name ?? '',
         c.company_email ?? '',
-        c.company_linkedin ?? '',
+        c.company_linkedin ?? c.contact_linkedin ?? '',
       ]],
     })
   }
