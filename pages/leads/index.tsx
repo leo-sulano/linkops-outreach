@@ -47,27 +47,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     return () => clearInterval(interval)
   }, [checkWorker])
 
-  async function processNewLeads() {
-    setProcessing(true)
-    setMessage(null)
-    try {
-      const res = await fetch('/api/leads/process', {
-        method: 'POST',
-        headers: API_HEADERS,
-      })
-      const data = await res.json()
-      if (data.queued > 0) {
-        setMessage(`✓ ${data.queued} new domains queued. Click Start Scraping to process them.`)
-      } else {
-        setMessage('No new leads to process — all domains already queued.')
-      }
-    } catch {
-      setMessage('Failed to process leads. Check the console.')
-    } finally {
-      setProcessing(false)
-    }
-  }
-
   async function toggleWorker() {
     if (isVercel) {
       setMessage('⚠ Worker runs locally. Open a terminal and run: cd worker && npm start')
@@ -113,13 +92,12 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
               : 'Scraper idle'}
           </span>
 
-          <button
-            onClick={processNewLeads}
-            disabled={processing}
-            className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50 transition-colors"
+          <a
+            href="/leads/new-leads"
+            className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium transition-colors"
           >
-            {processing ? 'Processing…' : 'Process New Leads'}
-          </button>
+            Process New Leads
+          </a>
 
           <button
             onClick={toggleWorker}
