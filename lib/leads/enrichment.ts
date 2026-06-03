@@ -1,7 +1,8 @@
+// [^\n] prevents captures from crossing line boundaries (avoids grabbing nav/body text)
 const COMPANY_PATTERNS = [
-  /(?:owned\s+(?:and\s+)?operated|published|managed|operated)\s+by\s+(.+?)(?:\s*\.?$)/im,
-  /©\s*\d{0,4}\s+([A-Z][^.]+?)\s*\.?\s+(?:all\s+)?rights/i,
-  /Copyright\s+©?\s*\d{0,4}\s+([A-Z][^.]+)/i,
+  /(?:owned\s+(?:and\s+)?operated|published|managed|operated)\s+by\s+([^\n.]+?)(?:\s*\.?\s*$)/im,
+  /©\s*\d{0,4}\s+([A-Z][^\n.]+?)\s*\.?\s+(?:all\s+)?rights/i,
+  /Copyright\s+©?\s*\d{0,4}\s+([A-Z][^\n.]{2,80})/i,
 ]
 
 export function extractCompanyName(text: string): string | null {
@@ -9,8 +10,9 @@ export function extractCompanyName(text: string): string | null {
     const match = text.match(pattern)
     if (match?.[1]) {
       let company = match[1].trim()
-      // Remove trailing punctuation (period or comma)
-      company = company.replace(/[.,]+$/, '')
+      company = company.replace(/[.,|]+$/, '').trim()
+      // Discard if result is suspiciously long or looks like nav text
+      if (company.length > 80 || company.includes('\n')) continue
       return company
     }
   }
