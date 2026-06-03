@@ -17,10 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
 
     const sheetLeads = await readLeadsSheet(spreadsheetId, leadsTab)
+
+    // Only scrape Affiliates — Operator, Skip, and any other type are excluded
     const affiliates = sheetLeads.filter((l) => l.type === 'Affiliate')
     await upsertLeads(affiliates)
 
-    // Skip domains already marked Done in the Leads sheet
+    // Also skip rows already marked Done in the Data Collected column
     const uncollected = affiliates.filter(
       (l) => !l.data_collected || l.data_collected.trim().toLowerCase() !== 'done'
     )
