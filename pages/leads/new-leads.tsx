@@ -32,9 +32,11 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     // Read sheet — only Affiliates where Data Collected is not Done
     const sheetLeads = await readLeadsSheet(spreadsheetId, leadsTab)
+    const EXCLUDED_TYPES = ['Operator', 'Skip', 'Unknown']
     const pending = sheetLeads.filter(
       (l) =>
         l.type === 'Affiliate' &&
+        !EXCLUDED_TYPES.includes(l.type) &&
         (!l.data_collected || l.data_collected.trim().toLowerCase() !== 'done')
     )
 

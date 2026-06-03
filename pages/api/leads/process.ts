@@ -18,8 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const sheetLeads = await readLeadsSheet(spreadsheetId, leadsTab)
 
-    // Only scrape Affiliates — Operator, Skip, and any other type are excluded
-    const affiliates = sheetLeads.filter((l) => l.type === 'Affiliate')
+    // Explicitly exclude Operator, Skip, Unknown — only Affiliate is processed
+    const EXCLUDED_TYPES = ['Operator', 'Skip', 'Unknown']
+    const affiliates = sheetLeads.filter(
+      (l) => l.type === 'Affiliate' && !EXCLUDED_TYPES.includes(l.type)
+    )
 
     // Strip data_collected — that column lives in Google Sheets only, not in Supabase
     await upsertLeads(affiliates.map(({ data_collected: _, ...rest }) => rest))
