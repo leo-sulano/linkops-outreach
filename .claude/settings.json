@@ -25,7 +25,11 @@
       "Bash(npm start *)",
       "Bash(rtk npx *)",
       "Bash(rtk next *)",
-      "Bash(node_modules/.bin/next build *)"
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(rtk grep *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(json.dumps\\(h, indent=2\\)\\) for h in d.get\\('hooks', {}\\).get\\('PreToolUse', []\\)]\")",
+      "Read(//c/Users/Leo/AppData/Roaming/npm/node_modules/**)",
+      "Bash(node -e ' *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
