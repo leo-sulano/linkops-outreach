@@ -54,8 +54,8 @@ async function processJob(job: {
   console.log(`[worker] Processing ${job.domain} (attempt ${job.retry_count + 1})`)
 
   try {
-    const { text, links } = await scrapeDomain(job.domain)
-    const company_name = extractCompanyName(text)
+    const { html, text, links } = await scrapeDomain(job.domain)
+    const company_name = extractCompanyName(text, html)
     const company_email = extractEmail(text)
     const company_linkedin = extractLinkedInCompany(links)
 

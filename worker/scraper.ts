@@ -16,6 +16,7 @@ const PAGE_TIMEOUT_MS = 15_000
 const NAV_DELAY_MS = 2_000
 
 export interface ScrapeResult {
+  html: string   // raw HTML of homepage (for og:site_name / JSON-LD extraction)
   text: string
   links: string[]
 }
@@ -42,6 +43,7 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
 
+  let homepageHtml = ''
   const allText: string[] = []
   const allLinks = new Set<string>()
 
@@ -51,6 +53,12 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
     for (const subpath of SUBPAGES) {
       try {
         await driver.get(`${baseUrl}${subpath}`)
+
+        // Capture full HTML of the homepage only (needed for og/JSON-LD extraction)
+        if (subpath === '') {
+          homepageHtml = await driver.getPageSource()
+        }
+
         const body = await driver.findElement(By.tagName('body'))
         allText.push(await body.getText())
 
@@ -73,5 +81,5 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
     await driver.quit()
   }
 
-  return { text: allText.join('\n\n'), links: Array.from(allLinks) }
+  return { html: homepageHtml, text: allText.join('\n\n'), links: Array.from(allLinks) }
 }

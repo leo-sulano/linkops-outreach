@@ -1,22 +1,63 @@
-// [^\n] prevents captures from crossing line boundaries (avoids grabbing nav/body text)
-const COMPANY_PATTERNS = [
-  /(?:owned\s+(?:and\s+)?operated|published|managed|operated)\s+by\s+([^\n.]+?)(?:\s*\.?\s*$)/im,
-  /©\s*\d{0,4}\s+([A-Z][^\n.]+?)\s*\.?\s+(?:all\s+)?rights/i,
-  /Copyright\s+©?\s*\d{0,4}\s+([A-Z][^\n.]{2,80})/i,
-]
+// --- Company name extraction (priority order) ---
+// 1. og:site_name meta tag
+// 2. JSON-LD Organization name
+// 3. Copyright footer text (single-line only)
 
-export function extractCompanyName(text: string): string | null {
-  for (const pattern of COMPANY_PATTERNS) {
-    const match = text.match(pattern)
-    if (match?.[1]) {
-      let company = match[1].trim()
-      company = company.replace(/[.,|]+$/, '').trim()
-      // Discard if result is suspiciously long or looks like nav text
-      if (company.length > 80 || company.includes('\n')) continue
-      return company
+function extractOgSiteName(html: string): string | null {
+  const m = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']{2,80})["']/i)
+    ?? html.match(/<meta[^>]+content=["']([^"']{2,80})["'][^>]+property=["']og:site_name["']/i)
+  return m?.[1]?.trim() ?? null
+}
+
+function extractJsonLdName(html: string): string | null {
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let m: RegExpExecArray | null
+  while ((m = scriptRe.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1])
+      const items = Array.isArray(data) ? data : [data]
+      for (const item of items) {
+        if (
+          item?.['@type'] &&
+          ['Organization', 'Corporation', 'LocalBusiness', 'WebSite'].includes(item['@type']) &&
+          typeof item.name === 'string' &&
+          item.name.length >= 2 &&
+          item.name.length <= 80
+        ) {
+          return item.name.trim()
+        }
+      }
+    } catch {
+      // malformed JSON — skip
     }
   }
   return null
+}
+
+const COPYRIGHT_PATTERNS = [
+  /(?:owned|operated|published|managed)\s+by\s+([^\n.]{2,80}?)(?:\s*[.|]|$)/im,
+  /©\s*\d{0,4}\s+([A-Z][^\n.]{1,79}?)\s*\.?\s+(?:all\s+)?rights/i,
+  /Copyright\s+©?\s*\d{0,4}\s+([A-Z][^\n.]{1,79})/i,
+]
+
+function extractCopyrightName(text: string): string | null {
+  for (const pattern of COPYRIGHT_PATTERNS) {
+    const m = text.match(pattern)
+    if (m?.[1]) {
+      const company = m[1].trim().replace(/[.,|]+$/, '')
+      if (company.length >= 2 && company.length <= 80 && !company.includes('\n')) {
+        return company
+      }
+    }
+  }
+  return null
+}
+
+// html = homepage source, text = all pages body text combined
+export function extractCompanyName(text: string, html = ''): string | null {
+  return extractOgSiteName(html)
+    ?? extractJsonLdName(html)
+    ?? extractCopyrightName(text)
 }
 
 const PREFERRED_PREFIXES = ['info@', 'contact@', 'support@', 'hello@', 'admin@']
