@@ -29,6 +29,7 @@ export interface SheetLead {
   url: string | null
   title: string | null
   type: string
+  data_collected: string | null  // column H — "Done" means already scraped
 }
 
 export interface SheetContact {
@@ -43,7 +44,7 @@ export interface SheetContact {
   contact_linkedin: string | null
 }
 
-// Columns: date_found(A) vertical(B) query(C) domain(D) url(E) title(F) type(G)
+// Columns: date_found(A) vertical(B) query(C) domain(D) url(E) title(F) type(G) data_collected(H)
 export async function readLeadsSheet(
   spreadsheetId: string,
   tab: string
@@ -51,7 +52,7 @@ export async function readLeadsSheet(
   const sheets = getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${tab}!A2:G`,
+    range: `${tab}!A2:H`,
   })
   const rows = res.data.values ?? []
   return rows
@@ -68,7 +69,35 @@ export async function readLeadsSheet(
       url: row[4] || null,
       title: row[5] || null,
       type: row[6] || 'Unknown',
+      data_collected: row[7] || null,
     }))
+}
+
+// Write "Done" to column H of the matching domain row in the Leads sheet.
+export async function markLeadDataCollected(
+  spreadsheetId: string,
+  tab: string,
+  domain: string
+): Promise<void> {
+  const sheets = getSheetsClient()
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${tab}!D:D`,
+  })
+  const rows = res.data.values ?? []
+  for (let i = 1; i < rows.length; i++) {
+    if (!rows[i]?.[0]) continue
+    if (normalizeDomain(rows[i][0]) === domain) {
+      const row = i + 1
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${tab}!H${row}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [['Done']] },
+      })
+      return
+    }
+  }
 }
 
 // Contacts sheet layout: domain(A) vertical(B) company_type(C) company_name(D) company_email(E) company_linkedin(F)

@@ -20,8 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const affiliates = sheetLeads.filter((l) => l.type === 'Affiliate')
     await upsertLeads(affiliates)
 
+    // Skip domains already marked Done in the Leads sheet
+    const uncollected = affiliates.filter(
+      (l) => !l.data_collected || l.data_collected.trim().toLowerCase() !== 'done'
+    )
+
     const existing = await getExistingContactDomains()
-    const newDomains = affiliates
+    const newDomains = uncollected
       .map((l) => l.domain)
       .filter((d) => !existing.has(d))
 

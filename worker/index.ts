@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
 import { extractCompanyName, extractEmail, extractLinkedInCompany } from '../lib/leads/enrichment'
-import { updateSingleContactInSheet } from '../lib/leads/sheets-service'
+import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
@@ -97,6 +97,12 @@ async function processJob(job: {
       process.env.GOOGLE_SHEET_ID!,
       process.env.GOOGLE_CONTACTS_SHEET_TAB || 'Contacts',
       contact
+    )
+
+    await markLeadDataCollected(
+      process.env.GOOGLE_SHEET_ID!,
+      process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
+      job.domain
     )
 
     const finalStatus = company_name ? 'completed' : 'needs_review'
