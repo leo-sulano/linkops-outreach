@@ -29,7 +29,11 @@
       "Bash(rtk grep *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(json.dumps\\(h, indent=2\\)\\) for h in d.get\\('hooks', {}\\).get\\('PreToolUse', []\\)]\")",
       "Read(//c/Users/Leo/AppData/Roaming/npm/node_modules/**)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(taskkill /F /IM chromedriver.exe)",
+      "Bash(taskkill /F /IM chrome.exe)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
