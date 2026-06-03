@@ -29,7 +29,7 @@ function getWorkerPid(): number | null {
 
 const IS_VERCEL = !!process.env.VERCEL
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireApiKey(req, res)) return
 
   // Worker runs locally via Selenium — cannot be spawned on Vercel serverless
