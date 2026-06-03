@@ -61,14 +61,13 @@ export function ProcessingModal({
       <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700">
           <h2 className="text-base font-semibold text-slate-100">Processing Leads</h2>
-          {done && (
-            <button
-              onClick={onComplete}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              <X size={18} />
-            </button>
-          )}
+          <button
+            onClick={onComplete}
+            className="text-slate-400 hover:text-slate-200 transition-colors"
+            title="Close — worker keeps running in background"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="px-5 py-4 border-b border-slate-700">
