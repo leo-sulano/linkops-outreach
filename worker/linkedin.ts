@@ -28,7 +28,6 @@ export async function discoverLinkedInContact(
   try {
     const options = new Options()
     options.addArguments(
-      '--headless',
       '--no-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',

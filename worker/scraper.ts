@@ -28,7 +28,6 @@ function sleep(ms: number): Promise<void> {
 export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
   const options = new Options()
   options.addArguments(
-    '--headless',
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--disable-gpu',
