@@ -85,73 +85,67 @@ export function Sidebar({ navCounts, selectedStage = 'all', onSelectStage, onAll
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {/* Outreach Pipeline Section */}
+        {/* Leads */}
         <div className="mb-6">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500 px-2 mb-3">
-            Outreach Pipeline
-          </h3>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
+            Leads
+          </p>
           <div className="space-y-1">
-            {pipelineItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (item.id === 'all') {
-                    onAllContactsOpen?.();
-                  } else {
-                    onSelectStage?.(item.id);
-                  }
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedStage === item.id
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-                }`}
+            {leadsItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-800 transition-colors"
               >
-                <item.icon size={16} className="flex-shrink-0" />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.count > 0 && (
-                  <span className="font-mono text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
-                    {item.count}
-                  </span>
-                )}
-              </button>
+                <item.icon size={15} />
+                {item.label}
+              </a>
             ))}
           </div>
         </div>
 
-        {/* Leads Research */}
-        <div className="px-3 py-2">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 px-2">
-            Leads
-          </p>
-          {leadsItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-            >
-              <item.icon size={15} />
-              {item.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Tools Section */}
-        <div>
-          <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500 px-2 mb-3">
-            Tools
-          </h3>
+        {/* Outreach Pipeline — coming soon */}
+        <div className="mb-6 opacity-40 pointer-events-none select-none">
+          <div className="flex items-center gap-2 px-2 mb-3">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500">
+              Outreach Pipeline
+            </h3>
+            <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-medium">
+              Soon
+            </span>
+          </div>
           <div className="space-y-1">
-            {toolsItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+            {pipelineItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-500"
               >
                 <item.icon size={16} className="flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
-              </a>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tools — coming soon */}
+        <div className="opacity-40 pointer-events-none select-none">
+          <div className="flex items-center gap-2 px-2 mb-3">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-slate-500">
+              Tools
+            </h3>
+            <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-medium">
+              Soon
+            </span>
+          </div>
+          <div className="space-y-1">
+            {toolsItems.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-500"
+              >
+                <item.icon size={16} className="flex-shrink-0" />
+                <span className="flex-1">{item.label}</span>
+              </div>
             ))}
           </div>
         </div>
