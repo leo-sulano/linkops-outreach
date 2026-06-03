@@ -19,7 +19,14 @@ interface NewLead {
 export const getServerSideProps: GetServerSideProps = async () => {
   const sb = getSupabaseAdminClient()
 
+  const hasSheetCreds =
+    !!process.env.GOOGLE_SHEET_ID &&
+    !!process.env.GOOGLE_CLIENT_EMAIL &&
+    !!process.env.GOOGLE_PRIVATE_KEY
+
   try {
+    if (!hasSheetCreds) throw new Error('Sheet credentials not configured')
+
     const spreadsheetId = process.env.GOOGLE_SHEET_ID!
     const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
 
