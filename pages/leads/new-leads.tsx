@@ -17,6 +17,8 @@ interface NewLead {
 }
 
 export const getServerSideProps: GetServerSideProps = async () => {
+  const sb = getSupabaseAdminClient()
+
   try {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID!
     const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
@@ -32,7 +34,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
     if (pending.length === 0) return { props: { initialLeads: [] } }
 
     // Get job statuses from Supabase for these domains
-    const sb = getSupabaseAdminClient()
     const { data: jobs } = await sb
       .from('lead_jobs')
       .select('domain, status')
@@ -48,7 +49,36 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     return { props: { initialLeads: leads } }
   } catch {
-    return { props: { initialLeads: [] } }
+    // Sheet unavailable — fall back to Supabase leads not yet in lead_contacts
+    try {
+      const { data: affiliates } = await sb
+        .from('leads')
+        .select('domain, vertical')
+        .eq('type', 'Affiliate')
+
+      if (!affiliates?.length) return { props: { initialLeads: [] } }
+
+      const { data: contacts } = await sb.from('lead_contacts').select('domain')
+      const contactSet = new Set((contacts ?? []).map((c) => c.domain))
+
+      const { data: jobs } = await sb
+        .from('lead_jobs')
+        .select('domain, status')
+        .in('domain', affiliates.map((a) => a.domain))
+      const jobMap = new Map((jobs ?? []).map((j) => [j.domain, j.status]))
+
+      const leads: NewLead[] = affiliates
+        .filter((a) => !contactSet.has(a.domain))
+        .map((a) => ({
+          domain: a.domain,
+          vertical: a.vertical,
+          status: jobMap.get(a.domain) ?? 'unprocessed',
+        }))
+
+      return { props: { initialLeads: leads } }
+    } catch {
+      return { props: { initialLeads: [] } }
+    }
   }
 }
 
