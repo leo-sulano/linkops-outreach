@@ -99,10 +99,21 @@ async function processJob(job: {
       contact
     )
 
+    // Determine remark for Data Collected column
+    const hasData = company_name || company_email || (company_linkedin ?? contact_linkedin)
+    let remark: string
+    if (hasData) {
+      remark = 'Done'
+    } else {
+      // Nothing found — describe what was missing
+      remark = 'No data found'
+    }
+
     await markLeadDataCollected(
       process.env.GOOGLE_SHEET_ID!,
       process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
-      job.domain
+      job.domain,
+      remark
     )
 
     const finalStatus = company_name ? 'completed' : 'needs_review'
@@ -111,16 +122,33 @@ async function processJob(job: {
       .update({ status: finalStatus, completed_at: new Date().toISOString() })
       .eq('id', job.id)
 
-    console.log(`[worker] ${job.domain} → ${finalStatus}`)
+    console.log(`[worker] ${job.domain} → ${finalStatus} | Data Collected: ${remark}`)
   } catch (err: any) {
     const msg = err?.message ?? String(err)
     console.error(`[worker] ${job.domain} failed: ${msg}`)
 
     const newRetry = job.retry_count + 1
+    const isLastRetry = newRetry >= MAX_RETRIES
+
+    // On final retry failure, write the reason to Data Collected column
+    if (isLastRetry) {
+      const reason = msg.toLowerCase().includes('timeout') ? 'Site timeout'
+        : msg.toLowerCase().includes('err_name_not_resolved') || msg.toLowerCase().includes('net::') ? 'Site unreachable'
+        : `Error: ${msg.slice(0, 60)}`
+      try {
+        await markLeadDataCollected(
+          process.env.GOOGLE_SHEET_ID!,
+          process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
+          job.domain,
+          reason
+        )
+      } catch { /* don't let sheet write block job update */ }
+    }
+
     await sb
       .from('lead_jobs')
       .update({
-        status: newRetry >= MAX_RETRIES ? 'failed' : 'pending',
+        status: isLastRetry ? 'failed' : 'pending',
         retry_count: newRetry,
         error_log: msg,
       })

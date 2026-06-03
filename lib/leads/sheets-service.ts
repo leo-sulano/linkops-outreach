@@ -73,11 +73,13 @@ export async function readLeadsSheet(
     }))
 }
 
-// Write "Done" to column H of the matching domain row in the Leads sheet.
+// Write a value to column H (Data Collected) of the matching domain row.
+// Pass "Done" when data was collected, or a short reason when it wasn't.
 export async function markLeadDataCollected(
   spreadsheetId: string,
   tab: string,
-  domain: string
+  domain: string,
+  value = 'Done'
 ): Promise<void> {
   const sheets = getSheetsClient()
   const res = await sheets.spreadsheets.values.get({
@@ -93,7 +95,7 @@ export async function markLeadDataCollected(
         spreadsheetId,
         range: `${tab}!H${row}`,
         valueInputOption: 'RAW',
-        requestBody: { values: [['Done']] },
+        requestBody: { values: [[value]] },
       })
       return
     }
