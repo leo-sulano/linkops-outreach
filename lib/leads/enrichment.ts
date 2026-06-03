@@ -55,9 +55,13 @@ function extractCopyrightName(text: string): string | null {
 
 // html = homepage source, text = all pages body text combined
 export function extractCompanyName(text: string, html = ''): string | null {
-  return extractOgSiteName(html)
+  const raw = extractOgSiteName(html)
     ?? extractJsonLdName(html)
     ?? extractCopyrightName(text)
+  if (!raw) return null
+  // Hard guarantee: return only the first non-empty line, trimmed
+  const firstLine = raw.split(/\r?\n/)[0].trim().replace(/[.,|]+$/, '')
+  return firstLine.length >= 2 && firstLine.length <= 80 ? firstLine : null
 }
 
 const PREFERRED_PREFIXES = ['info@', 'contact@', 'support@', 'hello@', 'admin@']
