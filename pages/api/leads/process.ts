@@ -20,7 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Only scrape Affiliates — Operator, Skip, and any other type are excluded
     const affiliates = sheetLeads.filter((l) => l.type === 'Affiliate')
-    await upsertLeads(affiliates)
+
+    // Strip data_collected — that column lives in Google Sheets only, not in Supabase
+    await upsertLeads(affiliates.map(({ data_collected: _, ...rest }) => rest))
 
     // Also skip rows already marked Done in the Data Collected column
     const uncollected = affiliates.filter(
