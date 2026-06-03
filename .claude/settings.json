@@ -33,7 +33,9 @@
       "Bash(taskkill /F /IM node.exe)",
       "Bash(taskkill /F /IM chromedriver.exe)",
       "Bash(taskkill /F /IM chrome.exe)",
-      "Bash(node node_modules/typescript/bin/tsc --noEmit)"
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(where.exe chromedriver *)",
+      "Bash(where.exe chrome *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
