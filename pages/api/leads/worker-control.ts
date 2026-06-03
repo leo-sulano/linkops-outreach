@@ -4,6 +4,7 @@ import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import { requireApiKey } from '@/lib/api-auth'
+import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
 const PID_FILE = path.join(process.cwd(), '.worker.pid')
 
@@ -32,10 +33,23 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireApiKey(req, res)) return
 
   // Worker runs locally via Selenium — cannot be spawned on Vercel serverless
+  // Infer if worker is running by checking for active 'processing' jobs in Supabase
   if (IS_VERCEL) {
+    const sb = getSupabaseAdminClient()
+    const { count } = await sb
+      .from('lead_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'processing')
+    const { count: pending } = await sb
+      .from('lead_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    const isActive = (count ?? 0) > 0
     return res.status(200).json({
-      running: false,
+      running: isActive,
       vercel: true,
+      processing: count ?? 0,
+      pending: pending ?? 0,
       message: 'Worker must be started locally: open a terminal and run `cd worker && npm start`',
     })
   }

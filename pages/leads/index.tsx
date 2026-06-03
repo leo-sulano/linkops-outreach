@@ -27,13 +27,17 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [message, setMessage] = useState<string | null>(null)
 
   const [isVercel, setIsVercel] = useState(false)
+  const [scrapingCount, setScrapingCount] = useState<{ processing: number; pending: number } | null>(null)
 
   const checkWorker = useCallback(async () => {
     try {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
-      if (data.vercel) setIsVercel(true)
+      if (data.vercel) {
+        setIsVercel(true)
+        setScrapingCount({ processing: data.processing ?? 0, pending: data.pending ?? 0 })
+      }
     } catch { /* ignore */ }
   }, [])
 
@@ -102,7 +106,11 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           {/* Worker status indicator */}
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
             <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
-            {workerRunning ? 'Scraping running' : 'Scraper idle'}
+            {workerRunning
+              ? scrapingCount
+                ? `Scraping — ${scrapingCount.processing} active, ${scrapingCount.pending} pending`
+                : 'Scraping running'
+              : 'Scraper idle'}
           </span>
 
           <button
