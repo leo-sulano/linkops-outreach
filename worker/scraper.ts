@@ -25,24 +25,51 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// Try to dismiss cookie consent / GDPR popups by clicking accept buttons
-async function dismissCookieBanner(driver: WebDriver): Promise<void> {
+// Click accept/allow on cookie banners and human verification checkboxes
+async function handlePageInteractions(driver: WebDriver): Promise<void> {
   const acceptTexts = [
     'allow all', 'accept all', 'accept cookies', 'agree to all',
-    'i agree', 'agree', 'ok', 'got it', 'allow cookies',
-    'accept', 'continue', 'confirm',
+    'i agree', 'agree', 'ok', 'got it', 'allow cookies', 'allow selection',
+    'accept', 'continue', 'confirm', 'consent', 'i accept', 'yes',
+    'i am human', "i'm human", 'verify you are human', 'proceed',
   ]
+
   try {
-    const buttons = await driver.findElements(By.css('button, a[role="button"]'))
+    // 1. Click cookie/consent buttons
+    const buttons = await driver.findElements(By.css('button, a[role="button"], input[type="button"], input[type="submit"]'))
     for (const btn of buttons) {
       try {
         const text = (await btn.getText()).toLowerCase().trim()
+          || ((await btn.getAttribute('value')) ?? '').toLowerCase().trim()
+          || ((await btn.getAttribute('aria-label')) ?? '').toLowerCase().trim()
         if (acceptTexts.some((t) => text === t || text.startsWith(t))) {
           await btn.click()
-          await sleep(800)
-          return
+          await sleep(1000)
+          break
         }
       } catch { /* stale or hidden */ }
+    }
+  } catch { /* ignore */ }
+
+  try {
+    // 2. Click Cloudflare Turnstile / "I am human" checkboxes inside iframes
+    const frames = await driver.findElements(By.css('iframe'))
+    for (const frame of frames) {
+      try {
+        const src = (await frame.getAttribute('src')) ?? ''
+        if (src.includes('cloudflare') || src.includes('turnstile') || src.includes('challenge') || src.includes('captcha')) {
+          await driver.switchTo().frame(frame)
+          const checkbox = await driver.findElements(By.css('input[type="checkbox"], .cf-turnstile, [id*="challenge"]'))
+          for (const cb of checkbox) {
+            try { await cb.click(); await sleep(1500) } catch { /* ignore */ }
+          }
+          await driver.switchTo().defaultContent()
+          await sleep(2000)
+          break
+        }
+      } catch {
+        try { await driver.switchTo().defaultContent() } catch { /* ignore */ }
+      }
     }
   } catch { /* ignore */ }
 }
@@ -95,8 +122,8 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { blo
       try {
         await driver.get(`${baseUrl}${subpath}`)
 
-        // Dismiss cookie/GDPR banners before reading content
-        await dismissCookieBanner(driver)
+        // Dismiss cookie/GDPR banners and handle human verification
+        await handlePageInteractions(driver)
 
         // Capture full HTML of the homepage only (needed for og/JSON-LD extraction)
         if (subpath === '') {
