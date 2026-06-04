@@ -25,14 +25,29 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
+function isBlocked(text: string): boolean {
+  const lower = text.toLowerCase()
+  return (
+    lower.includes('sorry, you have been blocked') ||
+    lower.includes('performing security verification') ||
+    lower.includes('enable javascript and cookies') ||
+    lower.includes('attention required! | cloudflare') ||
+    lower.includes('just a moment') ||
+    lower.includes('checking your browser')
+  )
+}
+
+export async function scrapeDomain(domain: string): Promise<ScrapeResult & { blocked?: boolean }> {
   const options = new Options()
   options.addArguments(
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--window-size=1280,800',
+    '--disable-blink-features=AutomationControlled',
     '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   )
+  options.excludeSwitches('enable-automation')
+  options.setUserPreferences({ 'credentials_enable_service': false })
 
   const driver: WebDriver = await new Builder()
     .forBrowser(Browser.CHROME)
@@ -40,6 +55,11 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
     .build()
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
+
+  // Hide webdriver flag to bypass basic bot detection
+  await driver.executeScript(
+    `Object.defineProperty(navigator, 'webdriver', {get: () => undefined})`
+  )
 
   let homepageHtml = ''
   const allText: string[] = []
@@ -58,7 +78,14 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult> {
         }
 
         const body = await driver.findElement(By.tagName('body'))
-        allText.push(await body.getText())
+        const bodyText = await body.getText()
+
+        // Detect Cloudflare / bot protection block on homepage — stop immediately
+        if (subpath === '' && isBlocked(bodyText)) {
+          return { html: homepageHtml, text: '', links: [], blocked: true }
+        }
+
+        allText.push(bodyText)
 
         const anchors = await driver.findElements(By.tagName('a'))
         for (const anchor of anchors) {
