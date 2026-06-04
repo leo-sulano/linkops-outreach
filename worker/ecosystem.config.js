@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'lead-worker',
-      script: 'index.ts',
-      interpreter: 'ts-node',
-      interpreter_args: '--transpile-only -r tsconfig-paths/register',
+      script: 'start.js',
+      interpreter: 'node',
       cwd: __dirname,
       watch: false,
       autorestart: true,
