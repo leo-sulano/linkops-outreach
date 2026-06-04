@@ -83,7 +83,7 @@ export async function handleTurnstile(driver: WebDriver): Promise<boolean> {
           }
           await driver.switchTo().defaultContent()
           await sleep(3000)
-          return true
+          return targets.length > 0
         }
       } catch {
         try { await driver.switchTo().defaultContent() } catch { /* ignore */ }

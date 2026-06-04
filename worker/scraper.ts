@@ -68,10 +68,10 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
         if (subpath === '') {
           // Full challenge handling on homepage — abort if captcha detected
           const { captchaRequired } = await runChallenges(driver)
-          homepageHtml = await driver.getPageSource()
           if (captchaRequired) {
-            return { html: homepageHtml, text: '', links: [], captchaRequired: true }
+            return { html: '', text: '', links: [], captchaRequired: true }
           }
+          homepageHtml = await driver.getPageSource()
         } else {
           // Subpages: dismiss banners only
           await dismissCookieBanners(driver)
