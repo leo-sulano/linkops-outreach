@@ -35,7 +35,8 @@
       "Bash(taskkill /F /IM chrome.exe)",
       "Bash(node node_modules/typescript/bin/tsc --noEmit)",
       "Bash(where.exe chromedriver *)",
-      "Bash(where.exe chrome *)"
+      "Bash(where.exe chrome *)",
+      "Bash(Remove-Item \"c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/worker/reset-stuck.ts\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
