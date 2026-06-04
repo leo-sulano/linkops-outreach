@@ -88,7 +88,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         setIsPaused(false)
       }
       if (isVercel) {
-        setMessage('▶ Worker started. Make sure the terminal is running: cd worker && npm start')
         setWorkerRunning(true)
       } else {
         const res = await fetch('/api/leads/worker-control', {
