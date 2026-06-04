@@ -25,6 +25,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Try to dismiss cookie consent / GDPR popups by clicking accept buttons
+async function dismissCookieBanner(driver: WebDriver): Promise<void> {
+  const acceptTexts = [
+    'allow all', 'accept all', 'accept cookies', 'agree to all',
+    'i agree', 'agree', 'ok', 'got it', 'allow cookies',
+    'accept', 'continue', 'confirm',
+  ]
+  try {
+    const buttons = await driver.findElements(By.css('button, a[role="button"]'))
+    for (const btn of buttons) {
+      try {
+        const text = (await btn.getText()).toLowerCase().trim()
+        if (acceptTexts.some((t) => text === t || text.startsWith(t))) {
+          await btn.click()
+          await sleep(800)
+          return
+        }
+      } catch { /* stale or hidden */ }
+    }
+  } catch { /* ignore */ }
+}
+
 function isBlocked(text: string): boolean {
   const lower = text.toLowerCase()
   return (
@@ -71,6 +93,9 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { blo
     for (const subpath of SUBPAGES) {
       try {
         await driver.get(`${baseUrl}${subpath}`)
+
+        // Dismiss cookie/GDPR banners before reading content
+        await dismissCookieBanner(driver)
 
         // Capture full HTML of the homepage only (needed for og/JSON-LD extraction)
         if (subpath === '') {
