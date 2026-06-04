@@ -17,6 +17,15 @@ const FRAMEWORK_SELECTORS = [
   'button[id*="cookie"]',
 ]
 
+const CF_PHRASES = [
+  'just a moment',
+  'checking your browser',
+  'attention required',
+  'enable javascript and cookies',
+  'performing security verification',
+  'sorry, you have been blocked',
+]
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -54,7 +63,7 @@ export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
   } catch { /* ignore */ }
 }
 
-export async function handleTurnstile(driver: WebDriver): Promise<void> {
+export async function handleTurnstile(driver: WebDriver): Promise<boolean> {
   try {
     const frames = await driver.findElements(By.css('iframe'))
     for (const frame of frames) {
@@ -74,27 +83,20 @@ export async function handleTurnstile(driver: WebDriver): Promise<void> {
           }
           await driver.switchTo().defaultContent()
           await sleep(3000)
-          return
+          return true
         }
       } catch {
         try { await driver.switchTo().defaultContent() } catch { /* ignore */ }
       }
     }
   } catch { /* ignore */ }
+  return false
 }
 
-export async function detectCaptcha(driver: WebDriver): Promise<boolean> {
+export async function detectCaptcha(driver: WebDriver, turnstileHandled?: boolean): Promise<boolean> {
   // Check body text for CF JS challenge phrases
   try {
     const bodyText = (await driver.findElement(By.tagName('body')).getText()).toLowerCase()
-    const CF_PHRASES = [
-      'just a moment',
-      'checking your browser',
-      'attention required',
-      'enable javascript and cookies',
-      'performing security verification',
-      'sorry, you have been blocked',
-    ]
     if (CF_PHRASES.some((p) => bodyText.includes(p))) return true
   } catch { /* ignore */ }
 
@@ -105,9 +107,11 @@ export async function detectCaptcha(driver: WebDriver): Promise<boolean> {
       try {
         const src = (await frame.getAttribute('src')) ?? ''
         if (
-          src.includes('cloudflare') ||
-          src.includes('turnstile') ||
-          src.includes('challenge') ||
+          (!turnstileHandled && (
+            src.includes('cloudflare') ||
+            src.includes('turnstile') ||
+            src.includes('challenge')
+          )) ||
           src.includes('hcaptcha.com') ||
           (src.includes('recaptcha') && (src.includes('bframe') || src.includes('anchor')))
         ) {
@@ -138,7 +142,7 @@ export async function runChallenges(
   driver: WebDriver
 ): Promise<{ captchaRequired: boolean }> {
   await dismissCookieBanners(driver)
-  await handleTurnstile(driver)
-  const captchaRequired = await detectCaptcha(driver)
+  const turnstileHandled = await handleTurnstile(driver)
+  const captchaRequired = await detectCaptcha(driver, turnstileHandled)
   return { captchaRequired }
 }
