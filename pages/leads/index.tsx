@@ -29,6 +29,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [isVercel, setIsVercel] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
@@ -39,6 +40,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
+      setIsPaused(data.paused ?? false)
       if (data.vercel) setIsVercel(true)
     } catch { /* ignore */ }
   }, [])
@@ -87,7 +89,40 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
   async function toggleWorker() {
     if (isVercel) {
-      setMessage('⚠ Worker runs locally. Open a terminal and run: cd worker && npm start')
+      setProcessing(true)
+      setMessage(null)
+      try {
+        if (workerRunning) {
+          // Pause: move all pending jobs to paused so worker idles
+          const res = await fetch('/api/leads/cancel-queue', {
+            method: 'POST',
+            headers: API_HEADERS,
+          })
+          const data = await res.json()
+          setMessage(`✓ Scraping paused — ${data.cancelled} jobs held. Click the button to continue.`)
+          setWorkerRunning(false)
+          setIsPaused(true)
+        } else {
+          // Resume: flip paused jobs back to pending
+          const res = await fetch('/api/leads/resume-queue', {
+            method: 'POST',
+            headers: API_HEADERS,
+          })
+          const data = await res.json()
+          setMessage(
+            data.resumed > 0
+              ? `✓ Resumed ${data.resumed} jobs. Make sure the worker terminal is running.`
+              : '⚠ No paused jobs. Open a terminal and run: cd worker && npm start'
+          )
+          if (data.resumed > 0) setWorkerRunning(true)
+          setIsPaused(false)
+        }
+        fetchActiveJobs()
+      } catch {
+        setMessage('Failed to update queue.')
+      } finally {
+        setProcessing(false)
+      }
       return
     }
     const action = workerRunning ? 'stop' : 'start'
@@ -148,7 +183,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white'
             }`}
           >
-            {processing ? '…' : workerRunning ? 'Stop Scraping' : 'Start Scraping'}
+            {processing ? '…' : workerRunning ? 'Stop Scraping' : isPaused ? 'Resume Scraping' : 'Start Scraping'}
           </button>
         </div>
       </div>

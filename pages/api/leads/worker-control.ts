@@ -44,9 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('lead_jobs')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
-    const isActive = (count ?? 0) > 0
+    const { count: paused } = await sb
+      .from('lead_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'paused')
+    const isActive = (count ?? 0) > 0 || (pending ?? 0) > 0
     return res.status(200).json({
       running: isActive,
+      paused: (paused ?? 0) > 0,
       vercel: true,
       processing: count ?? 0,
       pending: pending ?? 0,
