@@ -10,6 +10,7 @@ import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
 const MAX_RETRIES = 3
+const CONCURRENCY = 3
 
 function getSupabase() {
   return createClient(
@@ -37,7 +38,7 @@ async function resetStuckJobs() {
   console.log(`[worker] Reset ${data.length} stuck processing jobs → pending`)
 }
 
-async function claimPendingJob() {
+async function claimPendingJobs(count: number) {
   const sb = getSupabase()
   const { data } = await sb
     .from('lead_jobs')
@@ -45,18 +46,22 @@ async function claimPendingJob() {
     .eq('status', 'pending')
     .lt('retry_count', MAX_RETRIES)
     .order('created_at', { ascending: true })
-    .limit(1)
-    .single()
+    .limit(count)
 
-  if (!data) return null
+  if (!data || data.length === 0) return []
 
-  const { error } = await sb
-    .from('lead_jobs')
-    .update({ status: 'processing', started_at: new Date().toISOString() })
-    .eq('id', data.id)
-    .eq('status', 'pending') // optimistic lock
+  const claimed = await Promise.all(
+    data.map(async (job) => {
+      const { error } = await sb
+        .from('lead_jobs')
+        .update({ status: 'processing', started_at: new Date().toISOString() })
+        .eq('id', job.id)
+        .eq('status', 'pending') // optimistic lock
+      return error ? null : job
+    })
+  )
 
-  return error ? null : data
+  return claimed.filter(Boolean) as typeof data
 }
 
 async function processJob(job: {
@@ -185,12 +190,12 @@ async function processJob(job: {
 }
 
 async function pollLoop() {
-  console.log('[worker] Starting poll loop...')
+  console.log(`[worker] Starting poll loop (concurrency: ${CONCURRENCY})...`)
   await resetStuckJobs()
   while (true) {
-    const job = await claimPendingJob()
-    if (job) {
-      await processJob(job)
+    const jobs = await claimPendingJobs(CONCURRENCY)
+    if (jobs.length > 0) {
+      await Promise.all(jobs.map((job) => processJob(job)))
       await sleep(DOMAIN_DELAY_MS)
     } else {
       await sleep(POLL_INTERVAL_MS)
