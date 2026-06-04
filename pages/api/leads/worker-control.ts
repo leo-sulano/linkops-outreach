@@ -1,103 +1,69 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { spawn } from 'child_process'
 import { execSync } from 'child_process'
-import path from 'path'
-import fs from 'fs'
 import { requireApiKey } from '@/lib/api-auth'
 import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
-const PID_FILE = path.join(process.cwd(), '.worker.pid')
+const IS_VERCEL = !!process.env.VERCEL
 
-function isRunning(pid: number): boolean {
+function pm2(args: string): string {
   try {
-    process.kill(pid, 0)
-    return true
+    return execSync(`pm2 ${args}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] })
+  } catch {
+    return ''
+  }
+}
+
+function isWorkerRunning(): boolean {
+  try {
+    const out = pm2('jlist')
+    const list = JSON.parse(out || '[]') as { name: string; pm2_env?: { status: string } }[]
+    const proc = list.find((p) => p.name === 'lead-worker')
+    return proc?.pm2_env?.status === 'online'
   } catch {
     return false
   }
 }
 
-function getWorkerPid(): number | null {
-  try {
-    if (!fs.existsSync(PID_FILE)) return null
-    const pid = parseInt(fs.readFileSync(PID_FILE, 'utf-8').trim())
-    return isNaN(pid) ? null : pid
-  } catch {
-    return null
-  }
-}
-
-const IS_VERCEL = !!process.env.VERCEL
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireApiKey(req, res)) return
 
-  // Worker runs locally via Selenium — cannot be spawned on Vercel serverless
-  // Infer if worker is running by checking for active 'processing' jobs in Supabase
+  // On Vercel: can't control the local PM2 process — infer state from Supabase job counts
   if (IS_VERCEL) {
     const sb = getSupabaseAdminClient()
-    const { count } = await sb
-      .from('lead_jobs')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'processing')
-    const { count: pending } = await sb
-      .from('lead_jobs')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending')
-    const { count: paused } = await sb
-      .from('lead_jobs')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'paused')
+    const [{ count: processing }, { count: pending }, { count: paused }] = await Promise.all([
+      sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
+      sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'paused'),
+    ])
     return res.status(200).json({
-      running: (count ?? 0) > 0,
+      running: (processing ?? 0) > 0,
       paused: (paused ?? 0) > 0,
       vercel: true,
-      processing: count ?? 0,
+      processing: processing ?? 0,
       pending: pending ?? 0,
     })
   }
 
   if (req.method === 'GET') {
-    const pid = getWorkerPid()
-    const running = pid !== null && isRunning(pid)
-    if (!running && fs.existsSync(PID_FILE)) fs.unlinkSync(PID_FILE)
-    return res.status(200).json({ running, pid: running ? pid : null })
+    return res.status(200).json({ running: isWorkerRunning() })
   }
 
   if (req.method === 'POST') {
     const { action } = req.body as { action: 'start' | 'stop' }
 
     if (action === 'start') {
-      const existingPid = getWorkerPid()
-      if (existingPid && isRunning(existingPid)) {
-        return res.status(200).json({ started: false, message: 'Worker already running', pid: existingPid })
+      if (isWorkerRunning()) {
+        return res.status(200).json({ started: false, message: 'Worker already running' })
       }
-
-      const workerDir = path.join(process.cwd(), 'worker')
-      const child = spawn('npm', ['start'], {
-        cwd: workerDir,
-        detached: true,
-        stdio: 'ignore',
-        shell: true,
-      })
-      child.unref()
-      fs.writeFileSync(PID_FILE, String(child.pid))
-      return res.status(200).json({ started: true, pid: child.pid })
+      pm2('start lead-worker')
+      return res.status(200).json({ started: true })
     }
 
     if (action === 'stop') {
-      const pid = getWorkerPid()
-      if (!pid || !isRunning(pid)) {
-        if (fs.existsSync(PID_FILE)) fs.unlinkSync(PID_FILE)
+      if (!isWorkerRunning()) {
         return res.status(200).json({ stopped: false, message: 'Worker not running' })
       }
-      try {
-        // Use taskkill on Windows to kill entire process tree
-        execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' })
-      } catch {
-        try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ }
-      }
-      if (fs.existsSync(PID_FILE)) fs.unlinkSync(PID_FILE)
+      pm2('stop lead-worker')
       return res.status(200).json({ stopped: true })
     }
 
