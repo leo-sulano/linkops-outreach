@@ -62,6 +62,7 @@ function isBlocked(text: string): boolean {
 export async function scrapeDomain(domain: string): Promise<ScrapeResult & { blocked?: boolean }> {
   const options = new Options()
   options.addArguments(
+    '--headless=new',
     '--no-sandbox',
     '--disable-dev-shm-usage',
     '--window-size=1280,800',
