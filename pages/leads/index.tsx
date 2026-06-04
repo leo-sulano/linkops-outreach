@@ -82,15 +82,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     setBusy(true)
     setMessage(null)
     try {
+      // If there are paused jobs, flip them back to pending first
+      if (isPaused) {
+        await fetch('/api/leads/resume-queue', { method: 'POST', headers: API_HEADERS })
+        setIsPaused(false)
+      }
       if (isVercel) {
-        const res = await fetch('/api/leads/resume-queue', { method: 'POST', headers: API_HEADERS })
-        const data = await res.json()
-        setMessage(
-          data.resumed > 0
-            ? `✓ Resumed ${data.resumed} jobs. Make sure the worker is running: cd worker && npm start`
-            : '⚠ No paused jobs. Run: cd worker && npm start'
-        )
-        if (data.resumed > 0) { setWorkerRunning(true); setIsPaused(false) }
+        setMessage('▶ Worker started. Make sure the terminal is running: cd worker && npm start')
+        setWorkerRunning(true)
       } else {
         const res = await fetch('/api/leads/worker-control', {
           method: 'POST',
@@ -98,7 +97,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           body: JSON.stringify({ action: 'start' }),
         })
         const data = await res.json()
-        setMessage(data.started ? '✓ Scraping started.' : (data.message ?? 'Worker already running.'))
+        setMessage(data.started ? '▶ Scraping started.' : (data.message ?? 'Worker already running.'))
         setWorkerRunning(true)
       }
       fetchActiveJobs()
@@ -115,7 +114,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     try {
       const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
-      setMessage(`⏸ Paused — ${data.cancelled} jobs held. Click Start to resume.`)
+      setMessage(`⏸ Paused — ${data.cancelled} jobs held. Click Start Scraping to resume.`)
       setIsPaused(true)
       setWorkerRunning(false)
       fetchActiveJobs()
@@ -126,16 +125,15 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     }
   }
 
+  // Stop kills the worker but leaves all pending jobs intact.
+  // Clicking Start again will resume from where it left off.
   async function stopScraping() {
     setBusy(true)
     setMessage(null)
     try {
       if (isVercel) {
-        const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
-        const data = await res.json()
-        setMessage(`■ Stopped — ${data.cancelled} jobs cleared. Stop the worker terminal manually.`)
+        setMessage('■ Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.')
         setWorkerRunning(false)
-        setIsPaused(false)
       } else {
         const res = await fetch('/api/leads/worker-control', {
           method: 'POST',
@@ -143,7 +141,11 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           body: JSON.stringify({ action: 'stop' }),
         })
         const data = await res.json()
-        setMessage(data.stopped ? '■ Scraping stopped.' : (data.message ?? 'Worker was not running.'))
+        setMessage(
+          data.stopped
+            ? '■ Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.'
+            : (data.message ?? 'Worker was not running.')
+        )
         setWorkerRunning(false)
       }
       fetchActiveJobs()
@@ -184,7 +186,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             disabled={busy}
             className="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            ▶ Start
+            ▶ Start Scraping
           </button>
 
           <button
@@ -200,7 +202,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             disabled={busy}
             className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            ■ Stop
+            ■ Stop Scraping
           </button>
         </div>
       </div>
