@@ -30,11 +30,10 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [isVercel, setIsVercel] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [processing, setProcessing] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
 
-  // Poll worker status
   const checkWorker = useCallback(async () => {
     try {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
@@ -45,7 +44,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     } catch { /* ignore */ }
   }, [])
 
-  // Poll active jobs
   const fetchActiveJobs = useCallback(async () => {
     try {
       const res = await fetch('/api/leads/active-jobs', { headers: API_HEADERS })
@@ -66,86 +64,93 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   }, [checkWorker, fetchActiveJobs])
 
   async function processNewLeads() {
-    setProcessing(true)
+    setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/api/leads/process', {
-        method: 'POST',
-        headers: API_HEADERS,
-      })
+      const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
-      if (data.queued > 0) {
-        setMessage(`✓ ${data.queued} new domains queued.`)
-        fetchActiveJobs()
-      } else {
-        setMessage(data.message ?? 'No new leads to process.')
-      }
+      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
+      if (data.queued > 0) fetchActiveJobs()
     } catch {
-      setMessage('Failed to process leads.')
+      setMessage('Failed to queue leads.')
     } finally {
-      setProcessing(false)
+      setBusy(false)
     }
   }
 
-  async function toggleWorker() {
-    if (isVercel) {
-      setProcessing(true)
-      setMessage(null)
-      try {
-        if (workerRunning) {
-          // Pause: move all pending jobs to paused so worker idles
-          const res = await fetch('/api/leads/cancel-queue', {
-            method: 'POST',
-            headers: API_HEADERS,
-          })
-          const data = await res.json()
-          setMessage(`✓ Scraping paused — ${data.cancelled} jobs held. Click the button to continue.`)
-          setWorkerRunning(false)
-          setIsPaused(true)
-        } else {
-          // Resume: flip paused jobs back to pending
-          const res = await fetch('/api/leads/resume-queue', {
-            method: 'POST',
-            headers: API_HEADERS,
-          })
-          const data = await res.json()
-          setMessage(
-            data.resumed > 0
-              ? `✓ Resumed ${data.resumed} jobs. Make sure the worker terminal is running.`
-              : '⚠ No paused jobs. Open a terminal and run: cd worker && npm start'
-          )
-          if (data.resumed > 0) setWorkerRunning(true)
-          setIsPaused(false)
-        }
-        fetchActiveJobs()
-      } catch {
-        setMessage('Failed to update queue.')
-      } finally {
-        setProcessing(false)
-      }
-      return
-    }
-    const action = workerRunning ? 'stop' : 'start'
-    setProcessing(true)
+  async function startScraping() {
+    setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/api/leads/worker-control', {
-        method: 'POST',
-        headers: API_HEADERS,
-        body: JSON.stringify({ action }),
-      })
-      const data = await res.json()
-      if (action === 'start') {
-        setMessage(data.started ? '✓ Scraping started.' : data.message)
-        setWorkerRunning(data.started)
+      if (isVercel) {
+        const res = await fetch('/api/leads/resume-queue', { method: 'POST', headers: API_HEADERS })
+        const data = await res.json()
+        setMessage(
+          data.resumed > 0
+            ? `✓ Resumed ${data.resumed} jobs. Make sure the worker is running: cd worker && npm start`
+            : '⚠ No paused jobs. Run: cd worker && npm start'
+        )
+        if (data.resumed > 0) { setWorkerRunning(true); setIsPaused(false) }
       } else {
-        setMessage(data.stopped ? '✓ Scraping stopped.' : data.message)
+        const res = await fetch('/api/leads/worker-control', {
+          method: 'POST',
+          headers: API_HEADERS,
+          body: JSON.stringify({ action: 'start' }),
+        })
+        const data = await res.json()
+        setMessage(data.started ? '✓ Scraping started.' : (data.message ?? 'Worker already running.'))
+        setWorkerRunning(true)
+      }
+      fetchActiveJobs()
+    } catch {
+      setMessage('Failed to start scraping.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function pauseScraping() {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
+      const data = await res.json()
+      setMessage(`⏸ Paused — ${data.cancelled} jobs held. Click Start to resume.`)
+      setIsPaused(true)
+      setWorkerRunning(false)
+      fetchActiveJobs()
+    } catch {
+      setMessage('Failed to pause queue.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function stopScraping() {
+    setBusy(true)
+    setMessage(null)
+    try {
+      if (isVercel) {
+        const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
+        const data = await res.json()
+        setMessage(`■ Stopped — ${data.cancelled} jobs cleared. Stop the worker terminal manually.`)
+        setWorkerRunning(false)
+        setIsPaused(false)
+      } else {
+        const res = await fetch('/api/leads/worker-control', {
+          method: 'POST',
+          headers: API_HEADERS,
+          body: JSON.stringify({ action: 'stop' }),
+        })
+        const data = await res.json()
+        setMessage(data.stopped ? '■ Scraping stopped.' : (data.message ?? 'Worker was not running.'))
         setWorkerRunning(false)
       }
+      fetchActiveJobs()
     } catch {
-      setMessage('Failed to control worker.')
+      setMessage('Failed to stop scraping.')
     } finally {
-      setProcessing(false)
+      setBusy(false)
     }
   }
 
@@ -160,30 +165,42 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : 'bg-slate-600'}`} />
             {workerRunning
               ? `Scraping — ${processingCount} active, ${pendingCount} pending`
-              : 'Scraper idle'}
+              : isPaused ? 'Paused' : 'Idle'}
           </span>
 
           <button
             onClick={processNewLeads}
-            disabled={processing}
+            disabled={busy}
             className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {processing ? 'Processing…' : 'Process New Leads'}
+            Process New Leads
           </button>
 
           <button
-            onClick={toggleWorker}
-            disabled={processing}
-            className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${
-              workerRunning
-                ? 'bg-red-600 hover:bg-red-500 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-            }`}
+            onClick={startScraping}
+            disabled={busy}
+            className="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {processing ? '…' : workerRunning ? 'Stop Scraping' : isPaused ? 'Resume Scraping' : 'Start Scraping'}
+            ▶ Start
+          </button>
+
+          <button
+            onClick={pauseScraping}
+            disabled={busy}
+            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+          >
+            ⏸ Pause
+          </button>
+
+          <button
+            onClick={stopScraping}
+            disabled={busy}
+            className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+          >
+            ■ Stop
           </button>
         </div>
       </div>
