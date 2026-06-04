@@ -73,17 +73,17 @@ async function processJob(job: {
   console.log(`[worker] Processing ${job.domain} (attempt ${job.retry_count + 1})`)
 
   try {
-    const { html, text, links, blocked } = await scrapeDomain(job.domain)
+    const { html, text, links, captchaRequired } = await scrapeDomain(job.domain)
 
-    if (blocked) {
+    if (captchaRequired) {
       await markLeadDataCollected(
         process.env.GOOGLE_SHEET_ID!,
         process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
         job.domain,
-        'Blocked by Cloudflare'
+        'Captcha Required'
       )
       await sb.from('lead_jobs').update({ status: 'needs_review', completed_at: new Date().toISOString() }).eq('id', job.id)
-      console.log(`[worker] ${job.domain} → blocked by Cloudflare`)
+      console.log(`[worker] ${job.domain} → captcha required`)
       return
     }
 
