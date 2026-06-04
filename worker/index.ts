@@ -23,6 +23,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function resetStuckJobs() {
+  const sb = getSupabase()
+  const { data } = await sb
+    .from('lead_jobs')
+    .select('id')
+    .eq('status', 'processing')
+  if (!data || data.length === 0) return
+  await sb
+    .from('lead_jobs')
+    .update({ status: 'pending', started_at: null })
+    .eq('status', 'processing')
+  console.log(`[worker] Reset ${data.length} stuck processing jobs → pending`)
+}
+
 async function claimPendingJob() {
   const sb = getSupabase()
   const { data } = await sb
@@ -172,6 +186,7 @@ async function processJob(job: {
 
 async function pollLoop() {
   console.log('[worker] Starting poll loop...')
+  await resetStuckJobs()
   while (true) {
     const job = await claimPendingJob()
     if (job) {
