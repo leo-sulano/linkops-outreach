@@ -5,6 +5,7 @@ import { readLeadsSheet } from '@/lib/leads/sheets-service'
 import {
   upsertLeads,
   getExistingContactDomains,
+  getAlreadyQueuedDomains,
   insertPendingJobs,
 } from '@/lib/leads/repository'
 
@@ -32,10 +33,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (l) => !l.data_collected || l.data_collected.trim().toLowerCase() !== 'done'
     )
 
-    const existing = await getExistingContactDomains()
+    const [existing, alreadyQueued] = await Promise.all([
+      getExistingContactDomains(),
+      getAlreadyQueuedDomains(),
+    ])
     const newDomains = uncollected
       .map((l) => l.domain)
-      .filter((d) => !existing.has(d))
+      .filter((d) => !existing.has(d) && !alreadyQueued.has(d))
 
     if (newDomains.length === 0) {
       return res.status(200).json({

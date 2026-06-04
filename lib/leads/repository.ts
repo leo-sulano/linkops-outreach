@@ -64,6 +64,17 @@ export async function getExistingContactDomains(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.domain))
 }
 
+// Returns domains that already have a pending or processing job (don't re-queue these)
+export async function getAlreadyQueuedDomains(): Promise<Set<string>> {
+  const sb = getSupabaseAdminClient()
+  const { data, error } = await sb
+    .from('lead_jobs')
+    .select('domain')
+    .in('status', ['pending', 'processing'])
+  if (error) throw new Error(`getAlreadyQueuedDomains: ${error.message}`)
+  return new Set((data ?? []).map((r) => r.domain))
+}
+
 export async function insertPendingJobs(runId: string, domains: string[]): Promise<void> {
   const sb = getSupabaseAdminClient()
   const rows = domains.map((domain) => ({ run_id: runId, domain, status: 'pending' }))
