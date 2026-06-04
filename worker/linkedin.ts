@@ -1,5 +1,5 @@
 import { Builder, Browser, By, WebDriver } from 'selenium-webdriver'
-import { Options } from 'selenium-webdriver/chrome'
+import { Options, ServiceBuilder } from 'selenium-webdriver/chrome'
 
 export interface LinkedInContact {
   contact_name: string | null
@@ -28,17 +28,22 @@ export async function discoverLinkedInContact(
   try {
     const options = new Options()
     options.addArguments(
-      '--headless',
+      '--headless=new',
       '--no-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--window-size=1280,800',
+      '--log-level=3',
+      '--silent',
       '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     )
+    options.excludeSwitches('enable-automation', 'enable-logging')
 
+    const service = new ServiceBuilder().suppressOutput(true).build()
     driver = await new Builder()
       .forBrowser(Browser.CHROME)
       .setChromeOptions(options)
+      .setChromeService(service)
       .build()
 
     await driver.manage().setTimeouts({ pageLoad: 15_000, implicit: 5_000 })

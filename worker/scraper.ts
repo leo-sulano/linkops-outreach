@@ -1,5 +1,5 @@
 import { Builder, Browser, By, WebDriver } from 'selenium-webdriver'
-import { Options } from 'selenium-webdriver/chrome'
+import { Options, ServiceBuilder } from 'selenium-webdriver/chrome'
 
 const SUBPAGES = [
   '',
@@ -94,14 +94,18 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { blo
     '--disable-dev-shm-usage',
     '--window-size=1280,800',
     '--disable-blink-features=AutomationControlled',
+    '--log-level=3',
+    '--silent',
     '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   )
-  options.excludeSwitches('enable-automation')
+  options.excludeSwitches('enable-automation', 'enable-logging')
   options.setUserPreferences({ 'credentials_enable_service': false })
 
+  const service = new ServiceBuilder().suppressOutput(true).build()
   const driver: WebDriver = await new Builder()
     .forBrowser(Browser.CHROME)
     .setChromeOptions(options)
+    .setChromeService(service)
     .build()
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
