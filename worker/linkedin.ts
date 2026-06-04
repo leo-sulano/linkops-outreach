@@ -28,8 +28,10 @@ export async function discoverLinkedInContact(
   try {
     const options = new Options()
     options.addArguments(
+      '--headless',
       '--no-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-gpu',
       '--window-size=1280,800',
       '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     )
