@@ -166,10 +166,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : 'bg-slate-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : pendingCount > 0 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
             {workerRunning
               ? `Scraping — ${processingCount} active, ${pendingCount} pending`
-              : isPaused ? 'Paused' : 'Idle'}
+              : isPaused
+              ? `Paused — ${pendingCount} jobs held`
+              : pendingCount > 0
+              ? `Worker not running — ${pendingCount} jobs waiting`
+              : 'Idle'}
           </span>
 
           <button

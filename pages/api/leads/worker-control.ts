@@ -48,14 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('lead_jobs')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'paused')
-    const isActive = (count ?? 0) > 0 || (pending ?? 0) > 0
     return res.status(200).json({
-      running: isActive,
+      running: (count ?? 0) > 0,
       paused: (paused ?? 0) > 0,
       vercel: true,
       processing: count ?? 0,
       pending: pending ?? 0,
-      message: 'Worker must be started locally: open a terminal and run `cd worker && npm start`',
     })
   }
 
