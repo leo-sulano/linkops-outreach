@@ -149,7 +149,7 @@ export async function updateSingleContactInSheet(
       values: [[
         contact.company_name ?? '',
         contact.company_email ?? '',
-        contact.company_linkedin ?? contact.contact_linkedin ?? '',
+        contact.contact_linkedin ?? contact.company_linkedin ?? '',
       ]],
     },
   })

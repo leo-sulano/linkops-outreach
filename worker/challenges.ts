@@ -1,4 +1,5 @@
 import { By, WebDriver } from 'selenium-webdriver'
+import { Solver } from '@2captcha/captcha-solver'
 
 const ACCEPT_TEXTS = [
   'allow all', 'accept all', 'accept cookies', 'agree to all',
@@ -28,6 +29,12 @@ const CF_PHRASES = [
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function getSolver(): Solver | null {
+  const key = process.env.TWOCAPTCHA_API_KEY
+  if (!key) return null
+  return new Solver(key)
 }
 
 export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
@@ -63,55 +70,22 @@ export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
   } catch { /* ignore */ }
 }
 
-export async function handleTurnstile(driver: WebDriver): Promise<boolean> {
-  try {
-    const frames = await driver.findElements(By.css('iframe'))
-    for (const frame of frames) {
-      try {
-        const src = (await frame.getAttribute('src')) ?? ''
-        if (
-          src.includes('cloudflare') ||
-          src.includes('turnstile') ||
-          src.includes('challenge')
-        ) {
-          await driver.switchTo().frame(frame)
-          const targets = await driver.findElements(
-            By.css('input[type="checkbox"], .cf-turnstile-part, [id*="challenge"]')
-          )
-          for (const el of targets) {
-            try { await el.click() } catch { /* ignore */ }
-          }
-          await driver.switchTo().defaultContent()
-          await sleep(3000)
-          return targets.length > 0
-        }
-      } catch {
-        try { await driver.switchTo().defaultContent() } catch { /* ignore */ }
-      }
-    }
-  } catch { /* ignore */ }
-  return false
-}
-
-export async function detectCaptcha(driver: WebDriver, turnstileHandled?: boolean): Promise<boolean> {
+export async function detectCaptcha(driver: WebDriver): Promise<boolean> {
   // Check body text for CF JS challenge phrases
   try {
     const bodyText = (await driver.findElement(By.tagName('body')).getText()).toLowerCase()
     if (CF_PHRASES.some((p) => bodyText.includes(p))) return true
   } catch { /* ignore */ }
 
-  // Check iframes for unresolved Turnstile, hCaptcha, reCAPTCHA
+  // Check iframes for Turnstile, hCaptcha, reCAPTCHA
   try {
     const frames = await driver.findElements(By.css('iframe'))
     for (const frame of frames) {
       try {
         const src = (await frame.getAttribute('src')) ?? ''
         if (
-          (!turnstileHandled && (
-            src.includes('cloudflare') ||
-            src.includes('turnstile') ||
-            src.includes('challenge')
-          )) ||
+          src.includes('challenges.cloudflare.com') ||
+          src.includes('turnstile') ||
           src.includes('hcaptcha.com') ||
           (src.includes('recaptcha') && (src.includes('bframe') || src.includes('anchor')))
         ) {
@@ -121,10 +95,11 @@ export async function detectCaptcha(driver: WebDriver, turnstileHandled?: boolea
     }
   } catch { /* ignore */ }
 
-  // Check DOM for puzzle/captcha widgets
+  // Check DOM for captcha widgets
   const CAPTCHA_SELECTORS = [
+    '.cf-turnstile',
     '.g-recaptcha',
-    '#hcaptcha',
+    '.h-captcha',
     '[data-sitekey]',
     '.captcha-solver',
   ]
@@ -138,11 +113,102 @@ export async function detectCaptcha(driver: WebDriver, turnstileHandled?: boolea
   return false
 }
 
+// Attempt to solve whatever captcha is on the page via 2captcha.
+// Returns true if a token was injected and the captcha appeared to clear.
+async function solveCaptchaWith2Captcha(
+  driver: WebDriver,
+  pageUrl: string
+): Promise<boolean> {
+  const solver = getSolver()
+  if (!solver) return false
+
+  // --- Cloudflare Turnstile ---
+  const turnstileKey = await driver.executeScript<string | null>(
+    `return document.querySelector('.cf-turnstile, [class*="cf-turnstile"]')?.dataset?.sitekey ?? null`
+  )
+  if (turnstileKey) {
+    try {
+      const res = await solver.cloudflareTurnstile({ pageurl: pageUrl, sitekey: turnstileKey })
+      await driver.executeScript(
+        `const t = arguments[0];
+         const r = document.querySelector('[name="cf-turnstile-response"]');
+         if (r) r.value = t;
+         const w = document.querySelector('.cf-turnstile, [class*="cf-turnstile"]');
+         const cb = w?.dataset?.callback;
+         if (cb && window[cb]) window[cb](t);`,
+        res.data
+      )
+      await sleep(3000)
+      if (!(await detectCaptcha(driver))) return true
+    } catch { /* solving failed — try next type */ }
+  }
+
+  // --- Google reCAPTCHA v2 ---
+  const recaptchaKey = await driver.executeScript<string | null>(
+    `return document.querySelector('.g-recaptcha')?.dataset?.sitekey ?? null`
+  )
+  if (recaptchaKey) {
+    try {
+      const res = await solver.recaptcha({ pageurl: pageUrl, googlekey: recaptchaKey })
+      await driver.executeScript(
+        `const t = arguments[0];
+         const el = document.getElementById('g-recaptcha-response');
+         if (el) el.innerHTML = t;
+         try {
+           const key = Object.keys(___grecaptcha_cfg.clients)[0];
+           const client = ___grecaptcha_cfg.clients[key];
+           for (const v of Object.values(client)) {
+             if (v && typeof v === 'object' && typeof v.callback === 'function') {
+               v.callback(t); break;
+             }
+           }
+         } catch(e) {}`,
+        res.data
+      )
+      await sleep(3000)
+      if (!(await detectCaptcha(driver))) return true
+    } catch { /* solving failed — try next type */ }
+  }
+
+  // --- hCaptcha ---
+  const hcaptchaKey = await driver.executeScript<string | null>(
+    `return document.querySelector('.h-captcha')?.dataset?.sitekey ?? null`
+  )
+  if (hcaptchaKey) {
+    try {
+      const res = await solver.hcaptcha({ pageurl: pageUrl, sitekey: hcaptchaKey })
+      await driver.executeScript(
+        `const t = arguments[0];
+         const r = document.querySelector('[name="h-captcha-response"]');
+         if (r) r.value = t;
+         const gr = document.querySelector('[name="g-recaptcha-response"]');
+         if (gr) gr.value = t;
+         const el = document.querySelector('.h-captcha');
+         const cb = el?.dataset?.callback;
+         if (cb && window[cb]) window[cb](t);`,
+        res.data
+      )
+      await sleep(3000)
+      if (!(await detectCaptcha(driver))) return true
+    } catch { /* solving failed */ }
+  }
+
+  return false
+}
+
 export async function runChallenges(
   driver: WebDriver
 ): Promise<{ captchaRequired: boolean }> {
   await dismissCookieBanners(driver)
-  const turnstileHandled = await handleTurnstile(driver)
-  const captchaRequired = await detectCaptcha(driver, turnstileHandled)
-  return { captchaRequired }
+
+  // Fast path: no captcha at all
+  if (!(await detectCaptcha(driver))) return { captchaRequired: false }
+
+  // Attempt 2captcha solve
+  const pageUrl = await driver.getCurrentUrl()
+  const solved = await solveCaptchaWith2Captcha(driver, pageUrl)
+  if (solved) return { captchaRequired: false }
+
+  // Unsolvable (no API key, balance empty, or unknown captcha type)
+  return { captchaRequired: true }
 }

@@ -28,10 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Strip data_collected — that column lives in Google Sheets only, not in Supabase
     await upsertLeads(affiliates.map(({ data_collected: _, ...rest }) => rest))
 
-    // Also skip rows already marked Done in the Data Collected column
-    const uncollected = affiliates.filter(
-      (l) => !l.data_collected || l.data_collected.trim().toLowerCase() !== 'done'
-    )
+    // Skip any row that already has a value in the Data Collected column
+    const uncollected = affiliates.filter((l) => !l.data_collected?.trim())
 
     const [existing, alreadyQueued] = await Promise.all([
       getExistingContactDomains(),

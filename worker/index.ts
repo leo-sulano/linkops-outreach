@@ -4,7 +4,7 @@ dotenv.config({ path: '../.env.local' })
 import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
-import { extractCompanyName, extractEmail, extractLinkedInCompany } from '../lib/leads/enrichment'
+import { extractCompanyName, extractEmail, extractLinkedInCompany, extractLinkedInPerson } from '../lib/leads/enrichment'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
@@ -88,8 +88,10 @@ async function processJob(job: {
     }
 
     const company_name = extractCompanyName(text, html)
-    const company_email = extractEmail(text)
+    // Prefer mailto links in HTML source; fall back to plain-text regex
+    const company_email = extractEmail(html) ?? extractEmail(text)
     const company_linkedin = extractLinkedInCompany(links)
+    const person_linkedin_from_site = extractLinkedInPerson(links)
 
     let contact_name: string | null = null
     let contact_role: string | null = null
@@ -99,7 +101,11 @@ async function processJob(job: {
       const li = await discoverLinkedInContact(company_linkedin)
       contact_name = li.contact_name
       contact_role = li.contact_role
-      contact_linkedin = li.contact_linkedin
+      // Prefer contact found via LinkedIn company page; fall back to direct /in/ link on site
+      contact_linkedin = li.contact_linkedin ?? person_linkedin_from_site
+    } else if (person_linkedin_from_site) {
+      // No company page, but the site itself linked a personal LinkedIn profile
+      contact_linkedin = person_linkedin_from_site
     }
 
     const { data: lead } = await sb
@@ -148,7 +154,9 @@ async function processJob(job: {
       remark
     )
 
-    const finalStatus = company_name ? 'completed' : 'needs_review'
+    // Flag as needs_review if company name looks like a paragraph (>50 chars)
+    const nameIsClean = company_name !== null && company_name.length <= 50
+    const finalStatus = nameIsClean ? 'completed' : 'needs_review'
     await sb
       .from('lead_jobs')
       .update({ status: finalStatus, completed_at: new Date().toISOString() })
