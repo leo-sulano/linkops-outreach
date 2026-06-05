@@ -39,7 +39,7 @@ export async function discoverLinkedInContact(
     )
     options.excludeSwitches('enable-automation', 'enable-logging')
 
-    const service = new ServiceBuilder().setStdio('ignore').build()
+    const service = new ServiceBuilder().setStdio('ignore')
     driver = await new Builder()
       .forBrowser(Browser.CHROME)
       .setChromeOptions(options)

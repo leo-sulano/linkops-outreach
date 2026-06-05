@@ -41,7 +41,7 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
   options.excludeSwitches('enable-automation', 'enable-logging')
   options.setUserPreferences({ 'credentials_enable_service': false })
 
-  const service = new ServiceBuilder().setStdio('ignore').build()
+  const service = new ServiceBuilder().setStdio('ignore')
   const driver: WebDriver = await new Builder()
     .forBrowser(Browser.CHROME)
     .setChromeOptions(options)
