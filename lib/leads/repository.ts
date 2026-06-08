@@ -77,7 +77,7 @@ export async function getAlreadyQueuedDomains(): Promise<Set<string>> {
 
 export async function insertPendingJobs(runId: string, domains: string[]): Promise<void> {
   const sb = getSupabaseAdminClient()
-  const rows = domains.map((domain) => ({ run_id: runId, domain, status: 'pending' }))
+  const rows = domains.map((domain) => ({ run_id: runId, domain, status: 'pending', retry_count: 0 }))
   const { error } = await sb.from('lead_jobs').insert(rows)
   if (error) throw new Error(`insertPendingJobs: ${error.message}`)
 }

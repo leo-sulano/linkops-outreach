@@ -24,7 +24,12 @@ const CF_PHRASES = [
   'attention required',
   'enable javascript and cookies',
   'performing security verification',
+]
+
+// These mean a hard IP block — no amount of waiting or solving helps
+const CF_HARD_BLOCK_PHRASES = [
   'sorry, you have been blocked',
+  'access denied',
 ]
 
 function sleep(ms: number): Promise<void> {
@@ -37,14 +42,14 @@ function getSolver(): Solver | null {
   return new Solver(key)
 }
 
-export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
+async function dismissInFrame(driver: WebDriver): Promise<boolean> {
   // Pass 1: known framework selectors
   for (const selector of FRAMEWORK_SELECTORS) {
     try {
       const el = await driver.findElement(By.css(selector))
       await el.click()
       await sleep(1000)
-      return
+      return true
     } catch { /* not found — try next */ }
   }
 
@@ -63,19 +68,59 @@ export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
         if (ACCEPT_TEXTS.some((t) => text === t || text.startsWith(t))) {
           await btn.click()
           await sleep(1000)
-          return
+          return true
         }
       } catch { /* stale or hidden element */ }
     }
   } catch { /* ignore */ }
+
+  return false
 }
 
-export async function detectCaptcha(driver: WebDriver): Promise<boolean> {
-  // Check body text for CF JS challenge phrases
+export async function dismissCookieBanners(driver: WebDriver): Promise<void> {
+  // Try main document first
+  if (await dismissInFrame(driver)) return
+
+  // Some EU sites render the consent dialog inside an iframe
+  try {
+    const frames = await driver.findElements(By.css('iframe'))
+    for (const frame of frames) {
+      try {
+        await driver.switchTo().frame(frame)
+        const dismissed = await dismissInFrame(driver)
+        await driver.switchTo().defaultContent()
+        if (dismissed) return
+      } catch {
+        // iframe not accessible (cross-origin or stale) — switch back and try next
+        try { await driver.switchTo().defaultContent() } catch { /* ignore */ }
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+// Returns true if the page is a hard CF IP block (no widget, no waiting helps)
+export async function isHardBlocked(driver: WebDriver): Promise<boolean> {
+  try {
+    const bodyText = (await driver.findElement(By.tagName('body')).getText()).toLowerCase()
+    return CF_HARD_BLOCK_PHRASES.some((p) => bodyText.includes(p))
+  } catch {
+    return false
+  }
+}
+
+// Detects whether a captcha/challenge is present and unsolved.
+// `checkWidgets` — false when called after token injection (widgets stay in DOM even after solve).
+export async function detectCaptcha(
+  driver: WebDriver,
+  { checkWidgets = true }: { checkWidgets?: boolean } = {}
+): Promise<boolean> {
+  // Check body text for CF JS challenge phrases (always active)
   try {
     const bodyText = (await driver.findElement(By.tagName('body')).getText()).toLowerCase()
     if (CF_PHRASES.some((p) => bodyText.includes(p))) return true
   } catch { /* ignore */ }
+
+  if (!checkWidgets) return false
 
   // Check iframes for Turnstile, hCaptcha, reCAPTCHA
   try {
@@ -114,7 +159,7 @@ export async function detectCaptcha(driver: WebDriver): Promise<boolean> {
 }
 
 // Attempt to solve whatever captcha is on the page via 2captcha.
-// Returns true if a token was injected and the captcha appeared to clear.
+// Returns true if a token was injected (optimistic — the widget stays in DOM after solving).
 async function solveCaptchaWith2Captcha(
   driver: WebDriver,
   pageUrl: string
@@ -132,28 +177,33 @@ async function solveCaptchaWith2Captcha(
       await driver.executeScript(
         `const t = arguments[0];
          const r = document.querySelector('[name="cf-turnstile-response"]');
-         if (r) r.value = t;
+         if (r) { r.value = t; r.dispatchEvent(new Event('change', { bubbles: true })); }
          const w = document.querySelector('.cf-turnstile, [class*="cf-turnstile"]');
          const cb = w?.dataset?.callback;
-         if (cb && window[cb]) window[cb](t);`,
+         if (cb && window[cb]) { window[cb](t); }
+         // Dispatch custom event some sites listen for
+         document.dispatchEvent(new CustomEvent('cf-turnstile-callback', { detail: t }));`,
         res.data
       )
       await sleep(3000)
-      if (!(await detectCaptcha(driver))) return true
+      // Widgets stay in DOM after solve — only re-check body text (CF phrase gone = success)
+      if (!(await detectCaptcha(driver, { checkWidgets: false }))) return true
     } catch { /* solving failed — try next type */ }
   }
 
-  // --- Google reCAPTCHA v2 ---
-  const recaptchaKey = await driver.executeScript<string | null>(
-    `return document.querySelector('.g-recaptcha')?.dataset?.sitekey ?? null`
+  // --- Google reCAPTCHA v2 (visible only — invisible/v3 are skipped, not solvable via this flow) ---
+  const recaptchaEl = await driver.executeScript<{ sitekey: string | null; invisible: boolean } | null>(
+    `const el = document.querySelector('.g-recaptcha');
+     if (!el) return null;
+     return { sitekey: el.dataset.sitekey ?? null, invisible: el.dataset.size === 'invisible' };`
   )
-  if (recaptchaKey) {
+  if (recaptchaEl?.sitekey && !recaptchaEl.invisible) {
     try {
-      const res = await solver.recaptcha({ pageurl: pageUrl, googlekey: recaptchaKey })
+      const res = await solver.recaptcha({ pageurl: pageUrl, googlekey: recaptchaEl.sitekey })
       await driver.executeScript(
         `const t = arguments[0];
          const el = document.getElementById('g-recaptcha-response');
-         if (el) el.innerHTML = t;
+         if (el) { el.innerHTML = t; el.dispatchEvent(new Event('change', { bubbles: true })); }
          try {
            const key = Object.keys(___grecaptcha_cfg.clients)[0];
            const client = ___grecaptcha_cfg.clients[key];
@@ -166,7 +216,7 @@ async function solveCaptchaWith2Captcha(
         res.data
       )
       await sleep(3000)
-      if (!(await detectCaptcha(driver))) return true
+      if (!(await detectCaptcha(driver, { checkWidgets: false }))) return true
     } catch { /* solving failed — try next type */ }
   }
 
@@ -180,16 +230,16 @@ async function solveCaptchaWith2Captcha(
       await driver.executeScript(
         `const t = arguments[0];
          const r = document.querySelector('[name="h-captcha-response"]');
-         if (r) r.value = t;
+         if (r) { r.value = t; r.dispatchEvent(new Event('change', { bubbles: true })); }
          const gr = document.querySelector('[name="g-recaptcha-response"]');
-         if (gr) gr.value = t;
+         if (gr) { gr.value = t; gr.dispatchEvent(new Event('change', { bubbles: true })); }
          const el = document.querySelector('.h-captcha');
          const cb = el?.dataset?.callback;
          if (cb && window[cb]) window[cb](t);`,
         res.data
       )
       await sleep(3000)
-      if (!(await detectCaptcha(driver))) return true
+      if (!(await detectCaptcha(driver, { checkWidgets: false }))) return true
     } catch { /* solving failed */ }
   }
 
@@ -204,7 +254,24 @@ export async function runChallenges(
   // Fast path: no captcha at all
   if (!(await detectCaptcha(driver))) return { captchaRequired: false }
 
-  // Attempt 2captcha solve
+  // Hard IP block — waiting or solving never helps, fail immediately
+  if (await isHardBlocked(driver)) return { captchaRequired: true }
+
+  // CF JS-only challenge (no widget/sitekey) — auto-resolves in a few seconds, just wait
+  const hasWidget = await driver.executeScript<boolean>(
+    `return !!(document.querySelector('.cf-turnstile, .g-recaptcha, .h-captcha, [data-sitekey]'))`
+  )
+  if (!hasWidget) {
+    // Wait up to 10s for the JS challenge to clear itself
+    for (let i = 0; i < 5; i++) {
+      await sleep(2000)
+      if (!(await detectCaptcha(driver, { checkWidgets: false }))) return { captchaRequired: false }
+    }
+    // Still blocked after waiting — genuinely blocked
+    return { captchaRequired: true }
+  }
+
+  // Widget present — attempt 2captcha solve
   const pageUrl = await driver.getCurrentUrl()
   const solved = await solveCaptchaWith2Captcha(driver, pageUrl)
   if (solved) return { captchaRequired: false }

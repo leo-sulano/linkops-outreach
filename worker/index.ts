@@ -4,7 +4,7 @@ dotenv.config({ path: '../.env.local' })
 import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
-import { extractCompanyName, extractEmail, extractLinkedInCompany, extractLinkedInPerson } from '../lib/leads/enrichment'
+import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson } from '../lib/leads/enrichment'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
@@ -88,8 +88,8 @@ async function processJob(job: {
     }
 
     const company_name = extractCompanyName(text, html)
-    // Prefer mailto links in HTML source; fall back to plain-text regex
-    const company_email = extractEmail(html) ?? extractEmail(text)
+    // mailto: links from HTML source first (avoids tracker/JS addresses); fall back to rendered body text
+    const company_email = extractMailtoEmail(html) ?? extractEmail(text)
     const company_linkedin = extractLinkedInCompany(links)
     const person_linkedin_from_site = extractLinkedInPerson(links)
 
@@ -154,9 +154,9 @@ async function processJob(job: {
       remark
     )
 
-    // Flag as needs_review if company name looks like a paragraph (>50 chars)
-    const nameIsClean = company_name !== null && company_name.length <= 50
-    const finalStatus = nameIsClean ? 'completed' : 'needs_review'
+    // Only flag needs_review when a name was found but looks like a paragraph (>50 chars)
+    const nameIsTooLong = company_name !== null && company_name.length > 50
+    const finalStatus = nameIsTooLong ? 'needs_review' : 'completed'
     await sb
       .from('lead_jobs')
       .update({ status: finalStatus, completed_at: new Date().toISOString() })

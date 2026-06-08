@@ -1,6 +1,7 @@
 import {
   extractCompanyName,
   extractEmail,
+  extractMailtoEmail,
   extractLinkedInCompany,
 } from '@/lib/leads/enrichment'
 
@@ -20,7 +21,7 @@ describe('extractCompanyName', () => {
     expect(extractCompanyName(text)).toBe('Black Dog Corporation')
   })
 
-  it('extracts operated by pattern', () => {
+  it('extracts operated by pattern with dot in name', () => {
     const text = 'Operated by Gambling.com Group Limited'
     expect(extractCompanyName(text)).toBe('Gambling.com Group Limited')
   })
@@ -34,24 +35,42 @@ describe('extractCompanyName', () => {
   })
 })
 
-describe('extractEmail', () => {
-  it('extracts preferred mailto link first', () => {
+describe('extractMailtoEmail', () => {
+  it('extracts email from mailto href', () => {
     const html = '<a href="mailto:info@example.com">Contact</a>'
-    expect(extractEmail(html)).toBe('info@example.com')
+    expect(extractMailtoEmail(html)).toBe('info@example.com')
   })
 
-  it('prefers contact@ over generic emails', () => {
-    const html = 'Email us at contact@example.com or admin@example.com'
-    expect(extractEmail(html)).toBe('contact@example.com')
+  it('prefers preferred prefix over non-preferred mailto link', () => {
+    const html =
+      '<a href="mailto:newsletters@example.com">News</a>' +
+      '<a href="mailto:info@example.com">Contact</a>'
+    expect(extractMailtoEmail(html)).toBe('info@example.com')
   })
 
-  it('falls back to any email in text', () => {
-    const html = 'Reach us at team@example.com'
-    expect(extractEmail(html)).toBe('team@example.com')
+  it('strips query string from mailto href', () => {
+    const html = '<a href="mailto:info@example.com?subject=Hello&body=Hi">Contact</a>'
+    expect(extractMailtoEmail(html)).toBe('info@example.com')
+  })
+
+  it('returns null when no mailto link found', () => {
+    expect(extractMailtoEmail('<p>No contact here</p>')).toBeNull()
+  })
+})
+
+describe('extractEmail', () => {
+  it('prefers contact@ over generic emails in plain text', () => {
+    const text = 'Email us at contact@example.com or admin@example.com'
+    expect(extractEmail(text)).toBe('contact@example.com')
+  })
+
+  it('falls back to any email in plain text', () => {
+    const text = 'Reach us at team@example.com'
+    expect(extractEmail(text)).toBe('team@example.com')
   })
 
   it('returns null when no email found', () => {
-    expect(extractEmail('<p>No contact info here</p>')).toBeNull()
+    expect(extractEmail('No contact info here')).toBeNull()
   })
 })
 
@@ -67,9 +86,19 @@ describe('extractLinkedInCompany', () => {
     )
   })
 
-  it('prefers longer slug', () => {
+  it('prefers longer (more descriptive) slug over shorter one', () => {
     const links = [
       'https://linkedin.com/company/abc',
+      'https://linkedin.com/company/abc-media-group',
+    ]
+    expect(extractLinkedInCompany(links)).toBe(
+      'https://linkedin.com/company/abc-media-group'
+    )
+  })
+
+  it('prefers root page over sub-paths', () => {
+    const links = [
+      'https://linkedin.com/company/abc-media-group/about',
       'https://linkedin.com/company/abc-media-group',
     ]
     expect(extractLinkedInCompany(links)).toBe(
