@@ -2,17 +2,97 @@ import { Builder, Browser, By, WebDriver } from 'selenium-webdriver'
 import { Options, ServiceBuilder } from 'selenium-webdriver/chrome'
 import { dismissCookieBanners, runChallenges, detectCaptcha } from './challenges'
 
-const SUBPAGES = [
+// Always-visit paths (checked on every domain)
+const STATIC_SUBPAGES = [
   '',
+  // Contact
+  '/contact',
+  '/contact-us',
+  '/contacts',
+  '/get-in-touch',
+  '/reach-us',
+  '/connect',
+  '/support',
+  // About / Company
   '/about',
   '/about-us',
-  '/contact',
-  '/privacy',
-  '/privacy-policy',
+  '/about-the-company',
+  '/our-company',
+  '/company',
+  '/who-we-are',
+  '/our-story',
+  // Team / People
+  '/team',
+  '/our-team',
+  '/the-team',
+  '/meet-the-team',
+  '/people',
+  '/staff',
+  '/leadership',
+  '/management',
+  '/executives',
+  '/founders',
+  // Advertise / Partner / Affiliate
+  '/advertise',
+  '/advertise-with-us',
+  '/advertising',
+  '/media-kit',
+  '/media',
+  '/press',
+  '/partners',
+  '/partnership',
+  '/partnerships',
+  '/affiliates',
+  '/affiliate',
+  '/affiliate-program',
+  '/work-with-us',
+  '/collaborate',
+  '/sponsorship',
+  '/sponsor',
+  // Legal (EU imprint often has full company info + email)
+  '/impressum',
+  '/imprint',
+  '/legal',
+  '/legal-notice',
+  '/legal-notices',
+  '/disclaimer',
+  '/disclosures',
+  '/disclosure',
+  '/compliance',
+  // Terms
   '/terms',
   '/terms-and-conditions',
+  '/terms-of-service',
+  '/terms-of-use',
+  '/tos',
+  '/user-agreement',
+  '/service-agreement',
+  // Privacy
+  '/privacy',
+  '/privacy-policy',
+  '/privacy-notice',
+  '/data-protection',
+  '/data-privacy',
+  '/gdpr',
+  // Cookies
+  '/cookies',
+  '/cookie-policy',
+  '/cookie-notice',
 ]
 
+// Keywords used to discover additional same-domain pages from homepage links
+const DISCOVERY_KEYWORDS = [
+  'contact', 'about', 'team', 'staff', 'people', 'leadership',
+  'management', 'executive', 'founder', 'meet-',
+  'advertise', 'advertising', 'partner', 'affiliate', 'sponsor',
+  'press', 'media', 'media-kit', 'newsroom',
+  'work-with', 'collaborate', 'get-in-touch', 'connect',
+  'impressum', 'imprint', 'legal', 'disclaimer', 'disclosure', 'compliance',
+  'terms', 'privacy', 'cookie', 'gdpr', 'data-protection',
+  'author', 'editorial', 'who-we-are', 'our-story', 'our-company',
+]
+
+const MAX_DISCOVERED_PAGES = 8
 const PAGE_TIMEOUT_MS = 15_000
 const NAV_DELAY_MS = 2_000
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
@@ -172,41 +252,81 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
   try {
     const baseUrl = `https://${domain}`
 
-    for (const subpath of SUBPAGES) {
-      try {
-        await driver.get(`${baseUrl}${subpath}`)
+    // Collect homepage links then build full page list
+    let discoveredPaths: string[] = []
 
-        if (subpath === '') {
-          // Full challenge handling on homepage — abort if captcha detected
-          const { captchaRequired } = await runChallenges(driver)
-          if (captchaRequired) {
-            return { html: '', text: '', links: [], captchaRequired: true }
-          }
-          homepageHtml = await driver.getPageSource()
-        } else {
-          // Subpages: dismiss banners, then skip if it's a CF challenge page
-          await dismissCookieBanners(driver)
-          if (await detectCaptcha(driver, { checkWidgets: false })) continue
-        }
+    const visitPage = async (url: string, isHomepage: boolean) => {
+      await driver.get(url)
 
-        const body = await driver.findElement(By.tagName('body'))
-        const bodyText = await body.getText()
-        allText.push(bodyText)
-
-        const anchors = await driver.findElements(By.tagName('a'))
-        for (const anchor of anchors) {
-          try {
-            const href = await anchor.getAttribute('href')
-            if (href) allLinks.add(href)
-          } catch {
-            // stale element — skip
-          }
-        }
-
-        await sleep(NAV_DELAY_MS)
-      } catch {
-        // page not found or timeout — skip this subpage
+      if (isHomepage) {
+        const { captchaRequired } = await runChallenges(driver)
+        if (captchaRequired) return 'captcha'
+        homepageHtml = await driver.getPageSource()
+      } else {
+        await dismissCookieBanners(driver)
+        if (await detectCaptcha(driver, { checkWidgets: false })) return 'captcha_skip'
       }
+
+      const body = await driver.findElement(By.tagName('body'))
+      allText.push(await body.getText())
+
+      const anchors = await driver.findElements(By.tagName('a'))
+      for (const anchor of anchors) {
+        try {
+          const href = await anchor.getAttribute('href')
+          if (href) allLinks.add(href)
+        } catch { /* stale element */ }
+      }
+
+      await sleep(NAV_DELAY_MS)
+      return 'ok'
+    }
+
+    // --- Homepage ---
+    try {
+      const result = await visitPage(baseUrl, true)
+      if (result === 'captcha') return { html: '', text: '', links: [], captchaRequired: true }
+
+      // Discover same-domain links matching keywords
+      const sameDomain = Array.from(allLinks).filter((href) => {
+        try {
+          const u = new URL(href)
+          if (!u.hostname.includes(domain.replace(/^www\./, ''))) return false
+          const path = u.pathname.toLowerCase()
+          return DISCOVERY_KEYWORDS.some((kw) => path.includes(kw))
+        } catch { return false }
+      })
+
+      const staticSet = new Set(STATIC_SUBPAGES.map((p) => `${baseUrl}${p}`))
+      const seen = new Set<string>([baseUrl])
+      let count = 0
+
+      for (const href of sameDomain) {
+        if (count >= MAX_DISCOVERED_PAGES) break
+        try {
+          const u = new URL(href)
+          const normalized = `${u.origin}${u.pathname}`.replace(/\/$/, '')
+          if (!seen.has(normalized) && !staticSet.has(normalized)) {
+            discoveredPaths.push(normalized)
+            seen.add(normalized)
+            count++
+          }
+        } catch { /* invalid url */ }
+      }
+    } catch { /* homepage failed */ }
+
+    // --- Static subpages (skip homepage already done) ---
+    for (const subpath of STATIC_SUBPAGES.slice(1)) {
+      try {
+        await visitPage(`${baseUrl}${subpath}`, false)
+      } catch { /* page not found or timeout — skip */ }
+    }
+
+    // --- Discovered pages ---
+    for (const url of discoveredPaths) {
+      try {
+        await visitPage(url, false)
+      } catch { /* skip */ }
     }
   } finally {
     await driver.quit()

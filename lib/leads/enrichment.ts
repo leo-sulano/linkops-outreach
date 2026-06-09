@@ -184,7 +184,7 @@ export function extractEmail(text: string): string | null {
   if (personal) return personal
 
   // 3. Generic email as last resort
-  return allEmails[0]
+  return allEmails[0] ?? null
 }
 
 export function extractLinkedInCompany(links: string[]): string | null {

@@ -51,7 +51,24 @@
       "Read(//c/Users/Leo/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/requesting-code-review/**)",
       "WebFetch(domain:example.com)",
       "Bash(rtk tsc *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(rtk read *)",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\" /FO TABLE)",
+      "Bash(tasklist /FI \"IMAGENAME eq chrome.exe\" /FO TABLE)",
+      "Bash(tasklist /FI \"IMAGENAME eq chromedriver.exe\" /FO TABLE)",
+      "Bash(timeout 30 npx ts-node --transpile-only -r tsconfig-paths/register index.ts)",
+      "Skill(code-review)",
+      "Skill(code-review:*)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env.local'}\\); const keys=['NEXT_PUBLIC_SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','GOOGLE_SHEET_ID','TWOCAPTCHA_API_KEY']; keys.forEach\\(k => console.log\\(k + ': ' + \\(process.env[k] ? 'SET' : 'MISSING'\\)\\)\\)\")",
+      "Bash(Get-Content \"C:\\\\Users\\\\Leo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Leo-OneDrive-Desktop-AI-Automation-Internal-Projects-Link-Ops-Outreach\\\\30de6987-fb22-44ce-bfaf-389d26555bc1\\\\tasks\\\\bf62v07e5.output\" -Raw)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process chrome, chromedriver -ErrorAction SilentlyContinue)",
+      "Bash(rtk wc *)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -gt \\(Get-Date\\).AddMinutes\\(-10\\) } | Select-Object Id, CPU, WorkingSet, StartTime)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'../.env.local'}\\);const {createClient}=require\\('@supabase/supabase-js'\\);const sb=createClient\\(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}\\);['pending','processing','completed','failed','needs_review'].forEach\\(async s=>{const {count}=await sb.from\\('lead_jobs'\\).select\\('*',{count:'exact',head:true}\\).eq\\('status',s\\);console.log\\(s+':',count??0\\);}\\);\")",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet -gt 50MB } | Stop-Process -Force -Confirm:$false; Write-Output \"Done\")",
+      "PowerShell(Stop-Process -Force -Confirm:$false)"
     ]
   }
 }
