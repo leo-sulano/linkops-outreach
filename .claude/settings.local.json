@@ -68,7 +68,10 @@
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -gt \\(Get-Date\\).AddMinutes\\(-10\\) } | Select-Object Id, CPU, WorkingSet, StartTime)",
       "Bash(node -e \"require\\('dotenv'\\).config\\({path:'../.env.local'}\\);const {createClient}=require\\('@supabase/supabase-js'\\);const sb=createClient\\(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}\\);['pending','processing','completed','failed','needs_review'].forEach\\(async s=>{const {count}=await sb.from\\('lead_jobs'\\).select\\('*',{count:'exact',head:true}\\).eq\\('status',s\\);console.log\\(s+':',count??0\\);}\\);\")",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet -gt 50MB } | Stop-Process -Force -Confirm:$false; Write-Output \"Done\")",
-      "PowerShell(Stop-Process -Force -Confirm:$false)"
+      "PowerShell(Stop-Process -Force -Confirm:$false)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2\\)\\)\")",
+      "Bash(pm2 start *)",
+      "Bash(pm2 logs *)"
     ]
   }
 }
