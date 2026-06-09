@@ -10,7 +10,7 @@ import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
 const MAX_RETRIES = 3
-const CONCURRENCY = 3
+const CONCURRENCY = 5
 
 function getSupabase() {
   return createClient(
