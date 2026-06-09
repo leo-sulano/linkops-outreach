@@ -197,9 +197,22 @@ const STEALTH_SCRIPT = `
   })();
 `
 
+// Paths most likely to contain high-value contact emails — text from these is surfaced first
+const CONTACT_PAGE_PATHS = new Set([
+  '/contact', '/contact-us', '/contacts', '/get-in-touch', '/reach-us', '/connect',
+  '/about', '/about-us', '/about-the-company', '/our-company', '/company', '/who-we-are', '/our-story',
+  '/team', '/our-team', '/the-team', '/meet-the-team', '/people', '/staff',
+  '/leadership', '/management', '/executives', '/founders',
+  '/advertise', '/advertise-with-us', '/advertising',
+  '/partners', '/partnership', '/partnerships',
+  '/affiliates', '/affiliate', '/affiliate-program',
+  '/work-with-us', '/collaborate',
+])
+
 export interface ScrapeResult {
   html: string
   text: string
+  contactText: string
   links: string[]
 }
 
@@ -247,6 +260,7 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
 
   let homepageHtml = ''
   const allText: string[] = []
+  const contactPageText: string[] = []
   const allLinks = new Set<string>()
 
   try {
@@ -268,7 +282,14 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
       }
 
       const body = await driver.findElement(By.tagName('body'))
-      allText.push(await body.getText())
+      const bodyText = await body.getText()
+      allText.push(bodyText)
+
+      // Track text from high-value contact/about pages for priority email extraction
+      try {
+        const path = new URL(url).pathname.replace(/\/$/, '').toLowerCase()
+        if (CONTACT_PAGE_PATHS.has(path)) contactPageText.push(bodyText)
+      } catch { /* invalid url — skip */ }
 
       const anchors = await driver.findElements(By.tagName('a'))
       for (const anchor of anchors) {
@@ -332,5 +353,10 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
     await driver.quit()
   }
 
-  return { html: homepageHtml, text: allText.join('\n\n'), links: Array.from(allLinks) }
+  return {
+    html: homepageHtml,
+    text: allText.join('\n\n'),
+    contactText: contactPageText.join('\n\n'),
+    links: Array.from(allLinks),
+  }
 }

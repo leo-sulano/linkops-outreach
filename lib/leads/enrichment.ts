@@ -3,13 +3,28 @@
 // 2. JSON-LD Organization/Corporation/LocalBusiness name
 // 3. Privacy Policy opening statement
 // 4. Copyright footer text (single-line only)
+// 5. <title> tag first segment
 
 const MAX_COMPANY_NAME_LEN = 50
+
+// Strip keyword-stuffed suffixes: "Acme Corp | Best Reviews 2024" → "Acme Corp"
+function cleanTagName(raw: string): string {
+  return raw.split(/\s*[|–—\-:]\s*/)[0].trim()
+}
 
 function extractOgSiteName(html: string): string | null {
   const m = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']{2,60})["']/i)
     ?? html.match(/<meta[^>]+content=["']([^"']{2,60})["'][^>]+property=["']og:site_name["']/i)
-  return m?.[1]?.trim() ?? null
+  if (!m?.[1]) return null
+  return cleanTagName(m[1]) || null
+}
+
+function extractTitleName(html: string): string | null {
+  const m = html.match(/<title[^>]*>([^<]{2,80})<\/title>/i)
+  if (!m?.[1]) return null
+  const cleaned = cleanTagName(m[1].trim())
+  if (cleaned.length >= 2 && cleaned.length <= MAX_COMPANY_NAME_LEN) return cleaned
+  return null
 }
 
 function extractJsonLdName(html: string): string | null {
@@ -57,12 +72,16 @@ const COPYRIGHT_PATTERNS: RegExp[] = [
   // "Copyright 2024 Acme Corp" — lazy so it stops at the first non-name word
   /Copyright\s+©?\s*(?:\d{4}\s*[-–]?\s*\d{0,4}\s+)?([A-Z][^\n.@|]{1,58}?)(?:\s*[.|]|(?=\s+(?:all\s+rights?|reserved))|[\r\n]|$)/i,
   // "Operated by Acme Corp" — dot-letter sequences (e.g. Gambling.com) are allowed in company names;
-  // sentence-ending dot (followed by space or end) terminates the match but mid-word dot does not
+  // sentence-ending dot (followed by space or end) terminates the match but mid-word dot does not.
+  // Explicitly excludes "Powered/Designed/Built by" (hosting platforms / web agencies, not the site owner)
   /(?:owned|operated|published|managed)\s+by\s+(?!\s*(?:our|the\s|a\s|its\s|federally|tribal)\b)([A-Z](?:[^\n.@|]|\.[a-zA-Z]){1,58}?)(?:\s*[|]|\.(?=\s|$)|\s*$)/im,
 ]
 
 // Trailing rights boilerplate that pattern 2 may still over-capture on unusual footer formatting
 const TRAILING_BOILERPLATE = /\s+(?:all\s+rights?\s+reserved|rights?\s+reserved|reserved|all\s+rights?)\.?\s*$/i
+
+// Vendor/agency attribution lines — the site owner did NOT write this, so skip it
+const VENDOR_ATTRIBUTION = /^(?:powered|designed|built|developed|created|hosted)\s+by\b/i
 
 function extractCopyrightName(text: string): string | null {
   for (const pattern of COPYRIGHT_PATTERNS) {
@@ -77,7 +96,8 @@ function extractCopyrightName(text: string): string | null {
         company.length <= MAX_COMPANY_NAME_LEN &&
         !company.includes('\n') &&
         !company.includes('@') &&
-        !DISCLAIMER_STARTS.test(company)
+        !DISCLAIMER_STARTS.test(company) &&
+        !VENDOR_ATTRIBUTION.test(company)
       ) {
         return company
       }
@@ -121,6 +141,7 @@ export function extractCompanyName(text: string, html = ''): string | null {
     ?? extractJsonLdName(html)
     ?? extractPrivacyPolicyName(text)
     ?? extractCopyrightName(text)
+    ?? extractTitleName(html)
   if (!raw) return null
   // Hard guarantee: first non-empty line only, trimmed, no embedded emails
   const firstLine = raw.split(/\r?\n/)[0].trim().replace(/[.,|]+$/, '').trim()
@@ -131,16 +152,30 @@ export function extractCompanyName(text: string, html = ''): string | null {
   return firstLine
 }
 
-// Generic/departmental prefixes — kept as last-resort fallback per SOP
-const GENERIC_PREFIXES = [
-  'info@', 'contact@', 'support@', 'hello@', 'admin@',
-  'team@', 'sales@', 'press@', 'media@', 'advertise@',
-  'partnerships@', 'enquiries@', 'enquiry@', 'webmaster@',
-]
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
 
-function isGenericEmail(email: string): boolean {
-  return GENERIC_PREFIXES.some((p) => email.toLowerCase().startsWith(p))
+// Tier 2 — outreach-relevant department emails (valuable for lead gen)
+const OUTREACH_PREFIXES = [
+  'partners@', 'partner@', 'affiliates@', 'affiliate@', 'partnerships@',
+  'marketing@', 'advertise@', 'advertising@', 'ads@',
+  'sales@', 'business@', 'biz@', 'press@', 'media@',
+  'editorial@', 'sponsor@', 'sponsorship@', 'collab@', 'collaborate@',
+]
+
+// Tier 3 — low-value generic / customer-service emails (last resort)
+const GENERIC_CS_PREFIXES = [
+  'info@', 'contact@', 'support@', 'hello@', 'admin@',
+  'team@', 'enquiries@', 'enquiry@', 'webmaster@',
+  'noreply@', 'no-reply@', 'help@', 'service@', 'feedback@',
+]
+
+type EmailTier = 'personal' | 'outreach' | 'generic'
+
+function classifyEmail(email: string): EmailTier {
+  const lower = email.toLowerCase()
+  if (OUTREACH_PREFIXES.some((p) => lower.startsWith(p))) return 'outreach'
+  if (GENERIC_CS_PREFIXES.some((p) => lower.startsWith(p))) return 'generic'
+  return 'personal'
 }
 
 // Extract email address from a mailto: href — stops before query params / hash fragments
@@ -149,7 +184,7 @@ function parseMailtoHref(raw: string): string {
 }
 
 // Scan HTML source for mailto: links.
-// Priority: personal/non-generic → any generic (last resort).
+// Priority: personal → outreach-dept → generic (last resort).
 export function extractMailtoEmail(html: string): string | null {
   const mailtoPattern = /href="mailto:([^"]+)"/gi
   let match: RegExpExecArray | null
@@ -158,37 +193,54 @@ export function extractMailtoEmail(html: string): string | null {
     allMailtos.push(parseMailtoHref(match[1]))
   }
   if (allMailtos.length === 0) return null
-  return allMailtos.find((a) => !isGenericEmail(a)) ?? allMailtos[0]
+  return allMailtos.find((e) => classifyEmail(e) === 'personal')
+    ?? allMailtos.find((e) => classifyEmail(e) === 'outreach')
+    ?? allMailtos[0]
 }
 
 // Title keywords used to identify a decision-maker line in page text
 const DECISION_MAKER_TITLES =
   /\b(?:founder|co-?founder|owner|ceo|chief\s+executive|editor[- ]in[- ]chief|president|managing\s+director|publisher|operator)\b/i
 
-// Scan plain text (rendered body) for email addresses.
-// Priority: email on a decision-maker line → non-generic → generic (last resort).
-export function extractEmail(text: string): string | null {
-  const allEmails = text.match(EMAIL_REGEX) ?? []
-  if (allEmails.length === 0) return null
+function findEmailInText(src: string, tier: EmailTier | 'dm'): string | null {
+  if (tier === 'dm') {
+    for (const line of src.split(/\r?\n/)) {
+      if (DECISION_MAKER_TITLES.test(line)) {
+        const m = line.match(EMAIL_REGEX)
+        if (m?.[0]) return m[0]
+      }
+    }
+    return null
+  }
+  return (src.match(EMAIL_REGEX) ?? []).find((e) => classifyEmail(e) === tier) ?? null
+}
 
-  // 1. Email on the same line as a decision-maker title
-  for (const line of text.split(/\r?\n/)) {
-    if (DECISION_MAKER_TITLES.test(line)) {
-      const m = line.match(EMAIL_REGEX)
-      if (m?.[0]) return m[0]
+// Scan plain text for email addresses.
+// contactText (from /contact, /about, /team pages) is checked at each tier before full text.
+// Priority: decision-maker line → personal → outreach-dept → generic.
+export function extractEmail(text: string, contactText = ''): string | null {
+  const sources = contactText ? [contactText, text] : [text]
+
+  for (const tier of ['dm', 'personal', 'outreach'] as const) {
+    for (const src of sources) {
+      const found = findEmailInText(src, tier)
+      if (found) return found
     }
   }
 
-  // 2. Non-generic (personal-looking) email
-  const personal = allEmails.find((e) => !isGenericEmail(e))
-  if (personal) return personal
+  // Generic last resort — check contact pages first, then all text
+  for (const src of sources) {
+    const found = (src.match(EMAIL_REGEX) ?? []).find((e) => classifyEmail(e) === 'generic')
+    if (found) return found
+  }
 
-  // 3. Generic email as last resort
-  return allEmails[0] ?? null
+  return null
 }
 
 export function extractLinkedInCompany(links: string[]): string | null {
-  const companyLinks = links.filter((l) => /linkedin\.com\/company\//i.test(l))
+  const companyLinks = links.filter(
+    (l) => /linkedin\.com\/company\//i.test(l) && !LINKEDIN_SHARE_PATTERNS.test(l)
+  )
   if (companyLinks.length === 0) return null
 
   function isRootPage(url: string): boolean {
@@ -214,6 +266,9 @@ export function extractLinkedInCompany(links: string[]): string | null {
   return candidates.sort((a, b) => slugLength(b) - slugLength(a))[0]
 }
 
+// Social share buttons — not actual profiles
+const LINKEDIN_SHARE_PATTERNS = /\/shareArticle|\/sharing\/|[?&]mini=true/i
+
 // LinkedIn's own navigation paths — not personal profiles
 const LINKEDIN_SYSTEM_SLUGS = /\/in\/(?:feed|messaging|search|notifications|jobs|mynetwork|learning|posts?|following|followers|company-search)\b/i
 
@@ -221,7 +276,10 @@ const LINKEDIN_SYSTEM_SLUGS = /\/in\/(?:feed|messaging|search|notifications|jobs
 // Used as a fallback when no company page is available.
 export function extractLinkedInPerson(links: string[]): string | null {
   const personLinks = links.filter(
-    (l) => /linkedin\.com\/in\/[^/?]+/i.test(l) && !LINKEDIN_SYSTEM_SLUGS.test(l)
+    (l) =>
+      /linkedin\.com\/in\/[^/?]+/i.test(l) &&
+      !LINKEDIN_SYSTEM_SLUGS.test(l) &&
+      !LINKEDIN_SHARE_PATTERNS.test(l)
   )
   if (personLinks.length === 0) return null
   function slugLength(url: string): number {
@@ -232,4 +290,40 @@ export function extractLinkedInPerson(links: string[]): string | null {
     }
   }
   return personLinks.sort((a, b) => slugLength(a) - slugLength(b))[0]
+}
+
+// --- Contact person extraction from site text (About / Team pages) ---
+// Tried before hitting LinkedIn directly to avoid rate limits / anti-bot blocks.
+
+// Full executive title captured as the role value
+const EXEC_TITLE_RE =
+  /\b((?:co-?)?founder|owner|ceo|chief\s+executive(?:\s+officer)?|editor[- ]in[- ]chief|president|managing\s+director|publisher|operator|executive\s+director|director\s+general)\b/i
+
+// 2–3 consecutive title-case words — common person name shape
+const PERSON_NAME_RE = /\b([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){1,2})\b/
+
+export function extractContactFromSiteText(text: string): { name: string | null; role: string | null } {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const titleMatch = line.match(EXEC_TITLE_RE)
+    if (!titleMatch) continue
+    const role = titleMatch[1]
+
+    // Same line: "John Smith, CEO" / "CEO – John Smith" / "John Smith | Founder"
+    const withoutTitle = line.replace(EXEC_TITLE_RE, '').replace(/[,|–—\-:]\s*/g, ' ').trim()
+    const nameOnLine = withoutTitle.match(PERSON_NAME_RE)
+    if (nameOnLine) return { name: nameOnLine[1], role }
+
+    // Adjacent line: name is the line directly above or below the title line
+    for (const j of [i - 1, i + 1]) {
+      const adj = lines[j]
+      if (!adj || EXEC_TITLE_RE.test(adj)) continue
+      const nameAdj = adj.match(PERSON_NAME_RE)
+      if (nameAdj) return { name: nameAdj[1], role }
+    }
+  }
+
+  return { name: null, role: null }
 }

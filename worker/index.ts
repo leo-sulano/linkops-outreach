@@ -4,7 +4,7 @@ dotenv.config({ path: '../.env.local' })
 import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
-import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson } from '../lib/leads/enrichment'
+import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson, extractContactFromSiteText } from '../lib/leads/enrichment'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
@@ -73,7 +73,7 @@ async function processJob(job: {
   console.log(`[worker] Processing ${job.domain} (attempt ${job.retry_count + 1})`)
 
   try {
-    const { html, text, links, captchaRequired } = await scrapeDomain(job.domain)
+    const { html, text, contactText, links, captchaRequired } = await scrapeDomain(job.domain)
 
     if (captchaRequired) {
       await markLeadDataCollected(
@@ -89,22 +89,28 @@ async function processJob(job: {
 
     const company_name = extractCompanyName(text, html)
     // mailto: links from HTML source first (avoids tracker/JS addresses); fall back to rendered body text
-    const company_email = extractMailtoEmail(html) ?? extractEmail(text)
+    const company_email = extractMailtoEmail(html) ?? extractEmail(text, contactText)
     const company_linkedin = extractLinkedInCompany(links)
     const person_linkedin_from_site = extractLinkedInPerson(links)
 
-    let contact_name: string | null = null
-    let contact_role: string | null = null
+    // Step 1: Try to extract name/role from the site's own About/Team pages (fast, no rate limits)
+    const siteContact = extractContactFromSiteText(contactText)
+    let contact_name: string | null = siteContact.name
+    let contact_role: string | null = siteContact.role
     let contact_linkedin: string | null = null
 
     if (company_linkedin) {
-      const li = await discoverLinkedInContact(company_linkedin)
-      contact_name = li.contact_name
-      contact_role = li.contact_role
-      // Prefer contact found via LinkedIn company page; fall back to direct /in/ link on site
-      contact_linkedin = li.contact_linkedin ?? person_linkedin_from_site
+      if (!contact_name) {
+        // Site text didn't yield a name — fall back to LinkedIn scraping
+        const li = await discoverLinkedInContact(company_linkedin)
+        contact_name = li.contact_name
+        contact_role = li.contact_role
+        contact_linkedin = li.contact_linkedin ?? person_linkedin_from_site
+      } else {
+        // Name found on site; use any personal LinkedIn link found on the site
+        contact_linkedin = person_linkedin_from_site
+      }
     } else if (person_linkedin_from_site) {
-      // No company page, but the site itself linked a personal LinkedIn profile
       contact_linkedin = person_linkedin_from_site
     }
 

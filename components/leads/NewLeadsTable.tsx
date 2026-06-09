@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react'
 import { JobStatusBadge, JobStatus } from './JobStatusRow'
 
 interface NewLead {
@@ -24,8 +25,9 @@ export function NewLeadsTable({
         <button
           onClick={onProcess}
           disabled={isProcessing || leads.length === 0}
-          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
         >
+          <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
           {isProcessing ? 'Processing…' : 'Process New Leads'}
         </button>
       </div>

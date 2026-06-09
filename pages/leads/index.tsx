@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
+import { RefreshCw, Play, Loader2, Pause, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
 
@@ -30,7 +31,8 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [isVercel, setIsVercel] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'pause' | 'stop' | null>(null)
+  const busy = loadingAction !== null
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
 
@@ -64,7 +66,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   }, [checkWorker, fetchActiveJobs])
 
   async function processNewLeads() {
-    setBusy(true)
+    setLoadingAction('process')
     setMessage(null)
     try {
       const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
@@ -74,12 +76,12 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     } catch {
       setMessage('Failed to queue leads.')
     } finally {
-      setBusy(false)
+      setLoadingAction(null)
     }
   }
 
   async function startScraping() {
-    setBusy(true)
+    setLoadingAction('start')
     setMessage(null)
     try {
       // If there are paused jobs, flip them back to pending first
@@ -96,42 +98,42 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           body: JSON.stringify({ action: 'start' }),
         })
         const data = await res.json()
-        setMessage(data.started ? '▶ Scraping started.' : (data.message ?? 'Worker already running.'))
+        setMessage(data.started ? 'Scraping started.' : (data.message ?? 'Worker already running.'))
         setWorkerRunning(true)
       }
       fetchActiveJobs()
     } catch {
       setMessage('Failed to start scraping.')
     } finally {
-      setBusy(false)
+      setLoadingAction(null)
     }
   }
 
   async function pauseScraping() {
-    setBusy(true)
+    setLoadingAction('pause')
     setMessage(null)
     try {
       const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
-      setMessage(`⏸ Paused — ${data.cancelled} jobs held. Click Start Scraping to resume.`)
+      setMessage(`Paused — ${data.cancelled} jobs held. Click Start Scraping to resume.`)
       setIsPaused(true)
       setWorkerRunning(false)
       fetchActiveJobs()
     } catch {
       setMessage('Failed to pause queue.')
     } finally {
-      setBusy(false)
+      setLoadingAction(null)
     }
   }
 
   // Stop kills the worker but leaves all pending jobs intact.
   // Clicking Start again will resume from where it left off.
   async function stopScraping() {
-    setBusy(true)
+    setLoadingAction('stop')
     setMessage(null)
     try {
       if (isVercel) {
-        setMessage('■ Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.')
+        setMessage('Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.')
         setWorkerRunning(false)
       } else {
         const res = await fetch('/api/leads/worker-control', {
@@ -142,7 +144,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         const data = await res.json()
         setMessage(
           data.stopped
-            ? '■ Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.'
+            ? 'Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.'
             : (data.message ?? 'Worker was not running.')
         )
         setWorkerRunning(false)
@@ -151,7 +153,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     } catch {
       setMessage('Failed to stop scraping.')
     } finally {
-      setBusy(false)
+      setLoadingAction(null)
     }
   }
 
@@ -179,33 +181,41 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           <button
             onClick={processNewLeads}
             disabled={busy}
-            className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50 transition-colors"
           >
+            <RefreshCw className={`w-4 h-4 ${loadingAction === 'process' ? 'animate-spin' : ''}`} />
             Process New Leads
           </button>
 
           <button
             onClick={startScraping}
             disabled={busy}
-            className="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            ▶ Start Scraping
+            {workerRunning ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4 fill-current" />
+            )}
+            Start Scraping
           </button>
 
           <button
             onClick={pauseScraping}
             disabled={busy}
-            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            ⏸ Pause
+            <Pause className={`w-4 h-4 ${isPaused ? 'fill-current' : ''}`} />
+            Pause
           </button>
 
           <button
             onClick={stopScraping}
             disabled={busy}
-            className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            ■ Stop Scraping
+            <Square className="w-4 h-4 fill-current" />
+            Stop Scraping
           </button>
         </div>
       </div>
