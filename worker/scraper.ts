@@ -8,93 +8,40 @@ const STATIC_SUBPAGES = [
   // Contact
   '/contact',
   '/contact-us',
-  '/contacts',
-  '/get-in-touch',
-  '/reach-us',
-  '/connect',
-  '/support',
   // About / Company
   '/about',
   '/about-us',
-  '/about-the-company',
-  '/our-company',
-  '/company',
-  '/who-we-are',
-  '/our-story',
   // Team / People
   '/team',
   '/our-team',
-  '/the-team',
-  '/meet-the-team',
   '/people',
-  '/staff',
-  '/leadership',
-  '/management',
-  '/executives',
-  '/founders',
   // Advertise / Partner / Affiliate
   '/advertise',
   '/advertise-with-us',
-  '/advertising',
-  '/media-kit',
-  '/media',
-  '/press',
   '/partners',
-  '/partnership',
-  '/partnerships',
   '/affiliates',
-  '/affiliate',
   '/affiliate-program',
-  '/work-with-us',
-  '/collaborate',
-  '/sponsorship',
-  '/sponsor',
   // Legal (EU imprint often has full company info + email)
   '/impressum',
   '/imprint',
-  '/legal',
-  '/legal-notice',
-  '/legal-notices',
-  '/disclaimer',
-  '/disclosures',
-  '/disclosure',
-  '/compliance',
+  // Privacy (company name extraction)
+  '/privacy',
+  '/privacy-policy',
   // Terms
   '/terms',
   '/terms-and-conditions',
-  '/terms-of-service',
-  '/terms-of-use',
-  '/tos',
-  '/user-agreement',
-  '/service-agreement',
-  // Privacy
-  '/privacy',
-  '/privacy-policy',
-  '/privacy-notice',
-  '/data-protection',
-  '/data-privacy',
-  '/gdpr',
-  // Cookies
-  '/cookies',
-  '/cookie-policy',
-  '/cookie-notice',
 ]
 
 // Keywords used to discover additional same-domain pages from homepage links
 const DISCOVERY_KEYWORDS = [
-  'contact', 'about', 'team', 'staff', 'people', 'leadership',
-  'management', 'executive', 'founder', 'meet-',
-  'advertise', 'advertising', 'partner', 'affiliate', 'sponsor',
-  'press', 'media', 'media-kit', 'newsroom',
-  'work-with', 'collaborate', 'get-in-touch', 'connect',
-  'impressum', 'imprint', 'legal', 'disclaimer', 'disclosure', 'compliance',
-  'terms', 'privacy', 'cookie', 'gdpr', 'data-protection',
-  'author', 'editorial', 'who-we-are', 'our-story', 'our-company',
+  'contact', 'about', 'team', 'people', 'founder',
+  'advertise', 'partner', 'affiliate',
+  'impressum', 'imprint', 'privacy',
 ]
 
-const MAX_DISCOVERED_PAGES = 8
+const MAX_DISCOVERED_PAGES = 3
 const PAGE_TIMEOUT_MS = 15_000
-const NAV_DELAY_MS = 2_000
+const NAV_DELAY_MS = 800
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 // Injected before any page JS via Page.addScriptToEvaluateOnNewDocument.
