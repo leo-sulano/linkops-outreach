@@ -11,6 +11,8 @@ const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
 const MAX_RETRIES = 3
 const CONCURRENCY = 5
+const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
+const STUCK_JOB_THRESHOLD_MS = 10 * 60 * 1_000 // reset jobs processing > 10 min
 
 function getSupabase() {
   return createClient(
@@ -26,16 +28,19 @@ function sleep(ms: number): Promise<void> {
 
 async function resetStuckJobs() {
   const sb = getSupabase()
+  const cutoff = new Date(Date.now() - STUCK_JOB_THRESHOLD_MS).toISOString()
   const { data } = await sb
     .from('lead_jobs')
     .select('id')
     .eq('status', 'processing')
+    .lt('started_at', cutoff)
   if (!data || data.length === 0) return
+  const ids = data.map((r) => r.id)
   await sb
     .from('lead_jobs')
     .update({ status: 'pending', started_at: null })
-    .eq('status', 'processing')
-  console.log(`[worker] Reset ${data.length} stuck processing jobs → pending`)
+    .in('id', ids)
+  console.log(`[worker] Reset ${ids.length} stuck processing jobs → pending`)
 }
 
 async function claimPendingJobs(count: number) {
@@ -203,13 +208,48 @@ async function processJob(job: {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Job timed out after ${ms / 1000}s: ${label}`)), ms)
+    ),
+  ])
+}
+
+let loopIteration = 0
+
 async function pollLoop() {
   console.log(`[worker] Starting poll loop (concurrency: ${CONCURRENCY})...`)
   await resetStuckJobs()
   while (true) {
+    loopIteration++
+    // Periodically rescue jobs left in processing by a previous run or a timeout
+    if (loopIteration % 12 === 0) await resetStuckJobs()
+
     const jobs = await claimPendingJobs(CONCURRENCY)
     if (jobs.length > 0) {
-      await Promise.all(jobs.map((job) => processJob(job)))
+      await Promise.all(
+        jobs.map((job) =>
+          withTimeout(processJob(job), JOB_TIMEOUT_MS, job.domain).catch(async (err) => {
+            const msg = err?.message ?? String(err)
+            console.error(`[worker] ${job.domain} timed out: ${msg}`)
+            const sb = getSupabase()
+            const newRetry = job.retry_count + 1
+            const isLastRetry = newRetry >= MAX_RETRIES
+            await sb
+              .from('lead_jobs')
+              .update({
+                status: isLastRetry ? 'failed' : 'pending',
+                retry_count: newRetry,
+                error_log: msg,
+                started_at: null,
+              })
+              .eq('id', job.id)
+              .eq('status', 'processing')
+          })
+        )
+      )
       await sleep(DOMAIN_DELAY_MS)
     } else {
       await sleep(POLL_INTERVAL_MS)
