@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { GetServerSideProps } from 'next'
+import { Play, Loader2, Pause, Square } from 'lucide-react'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { ProcessingModal } from '@/components/leads/ProcessingModal'
 import { readLeadsSheet } from '@/lib/leads/sheets-service'
@@ -30,7 +31,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID!
     const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
 
-    // Read sheet — only Affiliates where Data Collected is not Done
     const sheetLeads = await readLeadsSheet(spreadsheetId, leadsTab)
     const EXCLUDED_TYPES = ['Operator', 'Skip', 'Unknown']
     const pending = sheetLeads.filter(
@@ -42,7 +42,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     if (pending.length === 0) return { props: { initialLeads: [] } }
 
-    // Get job statuses from Supabase for these domains
     const { data: jobs } = await sb
       .from('lead_jobs')
       .select('domain, status')
@@ -58,7 +57,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
     return { props: { initialLeads: leads } }
   } catch {
-    // Sheet unavailable — fall back to Supabase leads not yet in lead_contacts
     try {
       const { data: affiliates } = await sb
         .from('leads')
@@ -101,6 +99,63 @@ export default function NewLeadsPage({
   const [runId, setRunId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [workerRunning, setWorkerRunning] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<'start' | 'pause' | 'stop' | null>(null)
+  const busy = loadingAction !== null
+
+  const checkWorker = useCallback(async () => {
+    try {
+      const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
+      const data = await res.json()
+      setWorkerRunning(data.running)
+      setIsPaused(data.paused ?? false)
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    checkWorker()
+    const interval = setInterval(checkWorker, 5000)
+    return () => clearInterval(interval)
+  }, [checkWorker])
+
+  async function startScraping() {
+    setLoadingAction('start')
+    try {
+      await fetch('/api/leads/worker-control', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ action: 'start' }),
+      })
+      setWorkerRunning(true)
+      setIsPaused(false)
+    } catch { /* ignore */ }
+    finally { setLoadingAction(null) }
+  }
+
+  async function pauseScraping() {
+    setLoadingAction('pause')
+    try {
+      await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
+      setIsPaused(true)
+      setWorkerRunning(false)
+    } catch { /* ignore */ }
+    finally { setLoadingAction(null) }
+  }
+
+  async function stopScraping() {
+    setLoadingAction('stop')
+    try {
+      await fetch('/api/leads/worker-control', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ action: 'stop' }),
+      })
+      setWorkerRunning(false)
+    } catch { /* ignore */ }
+    finally { setLoadingAction(null) }
+  }
+
   async function handleProcess() {
     setIsProcessing(true)
     setError(null)
@@ -141,9 +196,56 @@ export default function NewLeadsPage({
     }
   }
 
+  const pendingCount = leads.filter((l) => l.status === 'pending').length
+  const processingCount = leads.filter((l) => l.status === 'processing').length
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
-      <h1 className="text-2xl font-bold text-slate-100 mb-6">New Leads</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-100">New Leads</h1>
+
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-sm text-slate-400">
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : 'bg-slate-600'}`} />
+            {workerRunning
+              ? `Scraping — ${processingCount} active, ${pendingCount} pending`
+              : isPaused
+              ? 'Paused'
+              : 'Idle'}
+          </span>
+
+          <button
+            onClick={startScraping}
+            disabled={busy}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+          >
+            {loadingAction === 'start' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className="w-4 h-4 fill-current" />
+            )}
+            Start Scraping
+          </button>
+
+          <button
+            onClick={pauseScraping}
+            disabled={busy}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+          >
+            <Pause className={`w-4 h-4 ${isPaused ? 'fill-current' : ''}`} />
+            Pause
+          </button>
+
+          <button
+            onClick={stopScraping}
+            disabled={busy}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+          >
+            <Square className="w-4 h-4 fill-current" />
+            Stop Scraping
+          </button>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
