@@ -205,6 +205,18 @@ export function WorkerSetupModal({ onAccept, onCancel }: Props) {
               Make sure the worker is running on your machine, then click Accept to start.
             </p>
             <CopyBlock command="node start.js" />
+            <div className="mt-3 flex items-center gap-2">
+              <Package size={14} className="text-green-400 flex-shrink-0" />
+              <span className="text-xs text-slate-400">Don&apos;t have Node.js?</span>
+              <a
+                href="https://nodejs.org"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 underline underline-offset-2 transition-colors"
+              >
+                Install Node.js <ExternalLink size={11} />
+              </a>
+            </div>
           </div>
           <div className="flex items-center gap-3 px-5 py-4 border-t border-slate-700">
             <button
