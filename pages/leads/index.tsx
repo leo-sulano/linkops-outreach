@@ -171,7 +171,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {workerRunning ? (
+            {loadingAction === 'start' ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Play className="w-4 h-4 fill-current" />
