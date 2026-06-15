@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Play, Loader2, Pause, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
-import { WorkerConfirmModal } from '@/components/leads/WorkerConfirmModal'
+import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
 
 const API_HEADERS = {
@@ -208,7 +208,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       )}
 
       {showWorkerModal && (
-        <WorkerConfirmModal
+        <WorkerSetupModal
           onAccept={async () => {
             setShowWorkerModal(false)
             await startScraping()
