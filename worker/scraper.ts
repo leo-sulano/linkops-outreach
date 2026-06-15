@@ -178,6 +178,13 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
     '--lang=en-US,en',
     '--log-level=3',
     '--silent',
+    '--disable-images',
+    '--blink-settings=imagesEnabled=false',
+    '--disable-extensions',
+    '--disable-plugins',
+    '--js-flags=--max-old-space-size=256',
+    '--memory-pressure-off',
+    '--single-process',
   )
   options.excludeSwitches('enable-automation', 'enable-logging')
   options.setUserPreferences({

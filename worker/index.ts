@@ -10,7 +10,7 @@ import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
 const MAX_RETRIES = 3
-const CONCURRENCY = 5
+const CONCURRENCY = 1
 const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
 const STUCK_JOB_THRESHOLD_MS = 10 * 60 * 1_000 // reset jobs processing > 10 min
 
