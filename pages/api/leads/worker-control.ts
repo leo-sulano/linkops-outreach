@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'paused'),
     ])
     return res.status(200).json({
-      running: (processing ?? 0) > 0 || (pending ?? 0) > 0,
+      running: (processing ?? 0) > 0,
       paused: (paused ?? 0) > 0 && (pending ?? 0) === 0 && (processing ?? 0) === 0,
       processing: processing ?? 0,
       pending: pending ?? 0,
