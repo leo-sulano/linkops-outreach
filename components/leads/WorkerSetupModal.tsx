@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, CheckCircle2, Circle, ExternalLink, Terminal,
-  Package, Chrome, KeyRound, Rocket, Play, Loader2,
+  Package, Globe, KeyRound, Rocket, Play, Loader2,
 } from 'lucide-react'
 
 const STORAGE_KEY = 'worker-setup-done'
@@ -73,7 +73,7 @@ const STEPS: Step[] = [
     id: 'chrome',
     title: 'Chrome Browser',
     subtitle: 'Required for scraping',
-    icon: <Chrome size={20} className="text-blue-400" />,
+    icon: <Globe size={20} className="text-blue-400" />,
     confirmLabel: 'I have Chrome installed',
     content: (
       <div className="space-y-3">
