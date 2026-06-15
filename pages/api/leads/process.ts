@@ -5,6 +5,7 @@ import { readLeadsSheet } from '@/lib/leads/sheets-service'
 import {
   upsertLeads,
   getAlreadyQueuedDomains,
+  removeStalePendingJobs,
   insertPendingJobs,
 } from '@/lib/leads/repository'
 
@@ -30,10 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Skip any row that already has a value in the Data Collected column
     const uncollected = affiliates.filter((l) => !l.data_collected?.trim())
 
+    const qualifiedDomains = uncollected.map((l) => l.domain)
+
+    // Remove pending/paused jobs that no longer qualify (type changed or data_collected filled)
+    await removeStalePendingJobs(qualifiedDomains)
+
     const alreadyQueued = await getAlreadyQueuedDomains()
-    const newDomains = uncollected
-      .map((l) => l.domain)
-      .filter((d) => !alreadyQueued.has(d))
+    const newDomains = qualifiedDomains.filter((d) => !alreadyQueued.has(d))
 
     if (newDomains.length === 0) {
       return res.status(200).json({

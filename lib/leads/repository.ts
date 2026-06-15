@@ -75,6 +75,28 @@ export async function getAlreadyQueuedDomains(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.domain))
 }
 
+// Remove pending/paused jobs whose domain is no longer in the qualified set
+export async function removeStalePendingJobs(qualifiedDomains: string[]): Promise<number> {
+  const sb = getSupabaseAdminClient()
+  const { data: pending, error: fetchErr } = await sb
+    .from('lead_jobs')
+    .select('domain')
+    .in('status', ['pending', 'paused'])
+  if (fetchErr) throw new Error(`removeStalePendingJobs fetch: ${fetchErr.message}`)
+
+  const qualifiedSet = new Set(qualifiedDomains)
+  const stale = (pending ?? []).map((r) => r.domain).filter((d) => !qualifiedSet.has(d))
+  if (stale.length === 0) return 0
+
+  const { error: delErr } = await sb
+    .from('lead_jobs')
+    .delete()
+    .in('domain', stale)
+    .in('status', ['pending', 'paused'])
+  if (delErr) throw new Error(`removeStalePendingJobs delete: ${delErr.message}`)
+  return stale.length
+}
+
 export async function insertPendingJobs(runId: string, domains: string[]): Promise<void> {
   const sb = getSupabaseAdminClient()
   const rows = domains.map((domain) => ({ run_id: runId, domain, status: 'pending', retry_count: 0 }))
