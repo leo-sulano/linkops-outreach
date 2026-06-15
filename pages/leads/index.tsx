@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Play, Loader2, Pause, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
+import { WorkerConfirmModal } from '@/components/leads/WorkerConfirmModal'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
 
 const API_HEADERS = {
@@ -30,6 +31,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [showWorkerModal, setShowWorkerModal] = useState(false)
   const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'pause' | 'stop' | null>(null)
   const busy = loadingAction !== null
   const [message, setMessage] = useState<string | null>(null)
@@ -167,7 +169,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           </button>
 
           <button
-            onClick={startScraping}
+            onClick={() => setShowWorkerModal(true)}
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
@@ -203,6 +205,16 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         <div className="mb-4 px-4 py-3 rounded-lg bg-slate-800 text-slate-300 text-sm">
           {message}
         </div>
+      )}
+
+      {showWorkerModal && (
+        <WorkerConfirmModal
+          onAccept={async () => {
+            setShowWorkerModal(false)
+            await startScraping()
+          }}
+          onCancel={() => setShowWorkerModal(false)}
+        />
       )}
 
       {/* Stats */}
