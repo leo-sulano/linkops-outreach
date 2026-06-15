@@ -93,7 +93,11 @@ export async function discoverLinkedInContact(
       }
     }
 
-    return empty
+    return {
+      contact_name: null,
+      contact_role: 'Company',
+      contact_linkedin: linkedInUrl,
+    }
   } catch {
     return empty
   } finally {
