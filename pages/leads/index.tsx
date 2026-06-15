@@ -29,7 +29,6 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
-  const [isVercel, setIsVercel] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'pause' | 'stop' | null>(null)
   const busy = loadingAction !== null
@@ -42,7 +41,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const data = await res.json()
       setWorkerRunning(data.running)
       setIsPaused(data.paused ?? false)
-      if (data.vercel) setIsVercel(true)
     } catch { /* ignore */ }
   }, [])
 
@@ -84,23 +82,15 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     setLoadingAction('start')
     setMessage(null)
     try {
-      // If there are paused jobs, flip them back to pending first
-      if (isPaused) {
-        await fetch('/api/leads/resume-queue', { method: 'POST', headers: API_HEADERS })
-        setIsPaused(false)
-      }
-      if (isVercel) {
-        setWorkerRunning(true)
-      } else {
-        const res = await fetch('/api/leads/worker-control', {
-          method: 'POST',
-          headers: API_HEADERS,
-          body: JSON.stringify({ action: 'start' }),
-        })
-        const data = await res.json()
-        setMessage(data.started ? 'Scraping started.' : (data.message ?? 'Worker already running.'))
-        setWorkerRunning(true)
-      }
+      const res = await fetch('/api/leads/worker-control', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ action: 'start' }),
+      })
+      const data = await res.json()
+      setMessage(data.resumed > 0 ? `Scraping resumed — ${data.resumed} jobs unpaused.` : 'Scraping active.')
+      setWorkerRunning(true)
+      setIsPaused(false)
       fetchActiveJobs()
     } catch {
       setMessage('Failed to start scraping.')
@@ -126,29 +116,18 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     }
   }
 
-  // Stop kills the worker but leaves all pending jobs intact.
-  // Clicking Start again will resume from where it left off.
   async function stopScraping() {
     setLoadingAction('stop')
     setMessage(null)
     try {
-      if (isVercel) {
-        setMessage('Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.')
-        setWorkerRunning(false)
-      } else {
-        const res = await fetch('/api/leads/worker-control', {
-          method: 'POST',
-          headers: API_HEADERS,
-          body: JSON.stringify({ action: 'stop' }),
-        })
-        const data = await res.json()
-        setMessage(
-          data.stopped
-            ? 'Scraping stopped. Pending jobs are preserved — click Start Scraping to resume.'
-            : (data.message ?? 'Worker was not running.')
-        )
-        setWorkerRunning(false)
-      }
+      const res = await fetch('/api/leads/worker-control', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ action: 'stop' }),
+      })
+      const data = await res.json()
+      setMessage(`Scraping stopped — ${data.paused} jobs paused. Click Start Scraping to resume.`)
+      setWorkerRunning(false)
       fetchActiveJobs()
     } catch {
       setMessage('Failed to stop scraping.')

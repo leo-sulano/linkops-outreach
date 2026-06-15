@@ -4,7 +4,6 @@ import { requireApiKey } from '@/lib/api-auth'
 import { readLeadsSheet } from '@/lib/leads/sheets-service'
 import {
   upsertLeads,
-  getExistingContactDomains,
   getAlreadyQueuedDomains,
   insertPendingJobs,
 } from '@/lib/leads/repository'
@@ -31,13 +30,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Skip any row that already has a value in the Data Collected column
     const uncollected = affiliates.filter((l) => !l.data_collected?.trim())
 
-    const [existing, alreadyQueued] = await Promise.all([
-      getExistingContactDomains(),
-      getAlreadyQueuedDomains(),
-    ])
+    const alreadyQueued = await getAlreadyQueuedDomains()
     const newDomains = uncollected
       .map((l) => l.domain)
-      .filter((d) => !existing.has(d) && !alreadyQueued.has(d))
+      .filter((d) => !alreadyQueued.has(d))
 
     if (newDomains.length === 0) {
       return res.status(200).json({
