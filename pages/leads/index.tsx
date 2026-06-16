@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
-import { Play, Loader2, Square, Globe } from 'lucide-react'
+import { PlayCircle, Loader2, StopCircle, Globe } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
@@ -76,9 +76,11 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     fetchLeads()
     const workerInterval = setInterval(checkWorker, 5000)
     const jobsInterval = setInterval(fetchActiveJobs, 3000)
+    const leadsInterval = setInterval(fetchLeads, 6000)
     return () => {
       clearInterval(workerInterval)
       clearInterval(jobsInterval)
+      clearInterval(leadsInterval)
     }
   }, [checkWorker, fetchActiveJobs, fetchLeads])
 
@@ -177,7 +179,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             {(workerRunning || loadingAction === 'start') ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Play className="w-4 h-4 fill-current" />
+              <PlayCircle className="w-4 h-4" />
             )}
             Start Scraping
           </button>
@@ -187,7 +189,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            <Square className="w-4 h-4 fill-current" />
+            <StopCircle className="w-4 h-4" />
             Stop Scraping
           </button>
         </div>

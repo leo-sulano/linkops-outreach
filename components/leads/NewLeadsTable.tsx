@@ -10,6 +10,16 @@ interface NewLead {
 
 const PAGE_SIZE = 24
 
+const STATUS_ORDER: Record<string, number> = {
+  processing:   0,
+  pending:      1,
+  unprocessed:  2,
+  paused:       3,
+  needs_review: 4,
+  failed:       5,
+  completed:    6,
+}
+
 const VERTICAL_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
   Crypto:  { bg: 'bg-blue-500/10',   text: 'text-blue-400',   dot: 'bg-blue-400' },
   iGaming: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
@@ -96,8 +106,11 @@ export function NewLeadsTable({
   onProcess: () => void
 }) {
   const [page, setPage] = useState(0)
-  const totalPages = Math.ceil(leads.length / PAGE_SIZE)
-  const pageLeads = leads.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const sorted = [...leads].sort(
+    (a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+  )
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
+  const pageLeads = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
     <div>
@@ -105,11 +118,11 @@ export function NewLeadsTable({
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-lg font-bold text-slate-100">New Leads</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{leads.length} domains to process</p>
+          <p className="text-xs text-slate-500 mt-0.5">{sorted.length} domains to process</p>
         </div>
         <button
           onClick={onProcess}
-          disabled={isProcessing || leads.length === 0}
+          disabled={isProcessing || sorted.length === 0}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
@@ -117,7 +130,7 @@ export function NewLeadsTable({
         </button>
       </div>
 
-      {leads.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="text-slate-500 text-sm">No new affiliate domains to process.</p>
       ) : (
         <>
@@ -130,7 +143,7 @@ export function NewLeadsTable({
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-5">
               <span className="text-xs text-slate-500">
-                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, leads.length)} of {leads.length}
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length}
               </span>
               <div className="flex items-center gap-2">
                 <button
