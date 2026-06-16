@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next'
 import { Play, Loader2, Square } from 'lucide-react'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { ProcessingModal } from '@/components/leads/ProcessingModal'
+import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { readLeadsSheet } from '@/lib/leads/sheets-service'
 import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
@@ -101,6 +102,7 @@ export default function NewLeadsPage({
 
   const [workerRunning, setWorkerRunning] = useState(false)
   const [loadingAction, setLoadingAction] = useState<'start' | 'stop' | null>(null)
+  const [showWorkerModal, setShowWorkerModal] = useState(false)
   const busy = loadingAction !== null
 
   const checkWorker = useCallback(async () => {
@@ -200,7 +202,7 @@ export default function NewLeadsPage({
           </span>
 
           <button
-            onClick={startScraping}
+            onClick={() => setShowWorkerModal(true)}
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
@@ -234,6 +236,16 @@ export default function NewLeadsPage({
         isProcessing={isProcessing}
         onProcess={handleProcess}
       />
+
+      {showWorkerModal && (
+        <WorkerSetupModal
+          onAccept={async () => {
+            await startScraping()
+            setShowWorkerModal(false)
+          }}
+          onCancel={() => setShowWorkerModal(false)}
+        />
+      )}
 
       {runId && (
         <ProcessingModal runId={runId} onComplete={handleModalComplete} />

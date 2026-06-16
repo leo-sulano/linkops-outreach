@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
-  X, CheckCircle2, Circle, ExternalLink, Terminal,
-  Package, Globe, KeyRound, Rocket, Play, Loader2,
+  X, CheckCircle2, ExternalLink, Terminal,
+  Package, KeyRound, Rocket, Play, Loader2,
 } from 'lucide-react'
 
 const STORAGE_KEY = 'worker-setup-done'
@@ -70,33 +70,6 @@ const STEPS: Step[] = [
     ),
   },
   {
-    id: 'chrome',
-    title: 'Chrome Browser',
-    subtitle: 'Required for scraping',
-    icon: <Globe size={20} className="text-blue-400" />,
-    confirmLabel: 'I have Chrome installed',
-    content: (
-      <div className="space-y-3">
-        <p className="text-sm text-slate-300 leading-relaxed">
-          The worker uses <span className="text-white font-medium">Google Chrome</span> to browse
-          websites. Make sure Chrome is installed on this PC.
-        </p>
-        <a
-          href="https://www.google.com/chrome"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm transition-colors"
-        >
-          <ExternalLink size={14} />
-          Download Google Chrome
-        </a>
-        <p className="text-xs text-slate-500">
-          Skip this if Chrome is already installed — most PCs already have it.
-        </p>
-      </div>
-    ),
-  },
-  {
     id: 'credentials',
     title: 'Get your credentials',
     subtitle: 'The .env.local file',
@@ -109,10 +82,10 @@ const STEPS: Step[] = [
           and API credentials. Ask the admin to send you this file.
         </p>
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 space-y-1">
-          <p className="text-xs text-slate-400 mb-2 font-medium">Place it here:</p>
-          <code className="text-xs text-slate-300 block">your-folder/</code>
+          <p className="text-xs text-slate-400 mb-2 font-medium">Place it here (project root, NOT inside worker/):</p>
+          <code className="text-xs text-amber-300 block font-bold">.env.local  ← here</code>
           <code className="text-xs text-slate-300 block pl-4">worker/</code>
-          <code className="text-xs text-amber-300 block pl-4 font-bold">.env.local  ← here</code>
+          <code className="text-xs text-slate-300 block pl-4">pages/</code>
         </div>
         <p className="text-xs text-slate-500">
           Never share this file publicly — it contains private API keys.
