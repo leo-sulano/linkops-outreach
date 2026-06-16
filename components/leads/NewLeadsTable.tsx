@@ -66,22 +66,20 @@ function LeadCard({ lead }: { lead: NewLead }) {
 
   return (
     <div className="group bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 hover:border-slate-600 hover:bg-slate-800/60 transition-all duration-200 cursor-default">
-      {/* Top row: icon + vertical tag */}
-      <div className="flex items-start justify-between">
-        <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
-          <Globe className="w-4 h-4 text-slate-500 group-hover:text-slate-400 transition-colors" />
+      {/* Top row: globe icon + domain */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
+          <Globe className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-400 transition-colors" />
         </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-200 truncate leading-snug">{name}</p>
+          <p className="text-[11px] text-slate-500">.{tld}</p>
+        </div>
+      </div>
+
+      {/* Bottom: vertical left, status right */}
+      <div className="flex items-center justify-between pt-1 border-t border-slate-800">
         <VerticalTag vertical={lead.vertical} />
-      </div>
-
-      {/* Domain name */}
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-slate-200 truncate leading-snug">{name}</p>
-        <p className="text-[11px] text-slate-500 mt-0.5">.{tld}</p>
-      </div>
-
-      {/* Bottom: status */}
-      <div className="pt-1 border-t border-slate-800">
         <StatusIndicator status={lead.status} />
       </div>
     </div>
