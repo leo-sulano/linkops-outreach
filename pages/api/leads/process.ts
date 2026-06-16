@@ -7,6 +7,7 @@ import {
   getAlreadyQueuedDomains,
   removeStalePendingJobs,
   insertPendingJobs,
+  isScrapingPaused,
 } from '@/lib/leads/repository'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -48,9 +49,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const runId = randomUUID()
-    await insertPendingJobs(runId, newDomains)
+    const scrapingPaused = await isScrapingPaused()
+    await insertPendingJobs(runId, newDomains, scrapingPaused ? 'paused' : 'pending')
 
-    return res.status(200).json({ runId, queued: newDomains.length })
+    return res.status(200).json({ runId, queued: newDomains.length, scrapingPaused })
   } catch (err: any) {
     console.error('[leads/process]', err)
     return res.status(500).json({ error: err.message ?? 'Internal server error' })

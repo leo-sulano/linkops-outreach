@@ -64,15 +64,26 @@ export async function getExistingContactDomains(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.domain))
 }
 
-// Returns domains that already have a pending or processing job (don't re-queue these)
+// Returns domains that already have an active job (pending, processing, or paused — don't re-queue these)
 export async function getAlreadyQueuedDomains(): Promise<Set<string>> {
   const sb = getSupabaseAdminClient()
   const { data, error } = await sb
     .from('lead_jobs')
     .select('domain')
-    .in('status', ['pending', 'processing'])
+    .in('status', ['pending', 'processing', 'paused'])
   if (error) throw new Error(`getAlreadyQueuedDomains: ${error.message}`)
   return new Set((data ?? []).map((r) => r.domain))
+}
+
+// Scraping is considered paused/stopped when paused jobs exist and nothing is actively running
+export async function isScrapingPaused(): Promise<boolean> {
+  const sb = getSupabaseAdminClient()
+  const [{ count: paused }, { count: pending }, { count: processing }] = await Promise.all([
+    sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'paused'),
+    sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
+  ])
+  return (paused ?? 0) > 0 && (pending ?? 0) === 0 && (processing ?? 0) === 0
 }
 
 // Remove pending/paused jobs whose domain is no longer in the qualified set
@@ -97,9 +108,13 @@ export async function removeStalePendingJobs(qualifiedDomains: string[]): Promis
   return stale.length
 }
 
-export async function insertPendingJobs(runId: string, domains: string[]): Promise<void> {
+export async function insertPendingJobs(
+  runId: string,
+  domains: string[],
+  status: 'pending' | 'paused' = 'pending'
+): Promise<void> {
   const sb = getSupabaseAdminClient()
-  const rows = domains.map((domain) => ({ run_id: runId, domain, status: 'pending', retry_count: 0 }))
+  const rows = domains.map((domain) => ({ run_id: runId, domain, status, retry_count: 0 }))
   const { error } = await sb.from('lead_jobs').insert(rows)
   if (error) throw new Error(`insertPendingJobs: ${error.message}`)
 }

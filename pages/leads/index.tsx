@@ -88,10 +88,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     try {
       const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
-      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
       if (data.queued > 0) {
+        setMessage(data.scrapingPaused
+          ? `✓ ${data.queued} domains queued (scraping is stopped — click Start Scraping to begin).`
+          : `✓ ${data.queued} new domains queued.`)
         fetchActiveJobs()
         fetchLeads()
+      } else {
+        setMessage(data.message ?? 'No new leads to process.')
       }
     } catch {
       setMessage('Failed to queue leads.')
@@ -105,10 +109,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     try {
       const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
-      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
       if (data.queued > 0) {
+        setMessage(data.scrapingPaused
+          ? `✓ ${data.queued} domains queued (scraping is stopped — click Start Scraping to begin).`
+          : `✓ ${data.queued} new domains queued.`)
         fetchActiveJobs()
         fetchLeads()
+      } else {
+        setMessage(data.message ?? 'No new leads to process.')
       }
     } catch {
       setMessage('Failed to queue leads.')
@@ -177,15 +185,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
               ? `Worker not running — ${pendingCount} jobs waiting`
               : 'Idle'}
           </span>
-
-          <button
-            onClick={processNewLeads}
-            disabled={busy}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-medium disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${loadingAction === 'process' ? 'animate-spin' : ''}`} />
-            Process New Leads
-          </button>
 
           <button
             onClick={() => setShowWorkerModal(true)}
