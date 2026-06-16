@@ -3,7 +3,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Play, Loader2, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
+import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
+
+interface NewLead {
+  domain: string
+  vertical: string | null
+  status: string
+}
 
 const API_HEADERS = {
   'x-api-key': process.env.NEXT_PUBLIC_API_SECRET_KEY ?? '',
@@ -36,6 +43,8 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const busy = loadingAction !== null
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
+  const [leads, setLeads] = useState<NewLead[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const checkWorker = useCallback(async () => {
     try {
@@ -53,16 +62,25 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     } catch { /* ignore */ }
   }, [])
 
+  const fetchLeads = useCallback(async () => {
+    try {
+      const res = await fetch('/api/leads/contacts?view=new-leads', { headers: API_HEADERS })
+      const data = await res.json()
+      setLeads(data.leads ?? [])
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
     checkWorker()
     fetchActiveJobs()
+    fetchLeads()
     const workerInterval = setInterval(checkWorker, 5000)
     const jobsInterval = setInterval(fetchActiveJobs, 3000)
     return () => {
       clearInterval(workerInterval)
       clearInterval(jobsInterval)
     }
-  }, [checkWorker, fetchActiveJobs])
+  }, [checkWorker, fetchActiveJobs, fetchLeads])
 
   async function processNewLeads() {
     setLoadingAction('process')
@@ -71,11 +89,31 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
       const data = await res.json()
       setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
-      if (data.queued > 0) fetchActiveJobs()
+      if (data.queued > 0) {
+        fetchActiveJobs()
+        fetchLeads()
+      }
     } catch {
       setMessage('Failed to queue leads.')
     } finally {
       setLoadingAction(null)
+    }
+  }
+
+  async function handleProcessLeads() {
+    setIsProcessing(true)
+    try {
+      const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
+      const data = await res.json()
+      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
+      if (data.queued > 0) {
+        fetchActiveJobs()
+        fetchLeads()
+      }
+    } catch {
+      setMessage('Failed to queue leads.')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -259,6 +297,15 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           </div>
         </div>
       )}
+
+      {/* Leads table */}
+      <div className="mt-6">
+        <NewLeadsTable
+          leads={leads}
+          isProcessing={isProcessing}
+          onProcess={handleProcessLeads}
+        />
+      </div>
     </div>
   )
 }
