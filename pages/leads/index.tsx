@@ -44,6 +44,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
   const [leads, setLeads] = useState<NewLead[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const checkWorker = useCallback(async () => {
     try {
@@ -96,6 +97,23 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       setMessage('Failed to queue leads.')
     } finally {
       setLoadingAction(null)
+    }
+  }
+
+  async function handleProcessLeads() {
+    setIsProcessing(true)
+    try {
+      const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
+      const data = await res.json()
+      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
+      if (data.queued > 0) {
+        fetchActiveJobs()
+        fetchLeads()
+      }
+    } catch {
+      setMessage('Failed to queue leads.')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -282,9 +300,19 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
       {/* New leads list */}
       <div className="mt-6">
-        <h2 className="text-lg font-bold text-slate-100 mb-4">
-          New Leads ({leads.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-100">
+            New Leads ({leads.length})
+          </h2>
+          <button
+            onClick={handleProcessLeads}
+            disabled={isProcessing || leads.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
+            {isProcessing ? 'Processing…' : 'Process New Leads'}
+          </button>
+        </div>
         {leads.length === 0 ? (
           <p className="text-slate-600 text-sm italic">No new affiliate domains to process.</p>
         ) : (
