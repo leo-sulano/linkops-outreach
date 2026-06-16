@@ -162,6 +162,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       setMessage(`Scraping stopped — ${data.paused} jobs paused. Click Start Scraping to resume.`)
       setWorkerRunning(false)
       fetchActiveJobs()
+      fetchLeads()
     } catch {
       setMessage('Failed to stop scraping.')
     } finally {
