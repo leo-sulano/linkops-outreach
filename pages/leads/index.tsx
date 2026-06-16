@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
-import { Play, Loader2, Square } from 'lucide-react'
+import { Play, Loader2, Square, Globe } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
@@ -261,7 +261,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
                 key={job.domain}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
               >
-                <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                <Globe className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
                 <span className="truncate flex-1 font-mono">{job.domain}</span>
                 {job.current_page && (
                   <span className="text-xs text-slate-500 flex-shrink-0 truncate">

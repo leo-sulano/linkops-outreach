@@ -61,20 +61,20 @@ function StatusIndicator({ status }: { status: string }) {
 
 function LeadCard({ lead }: { lead: NewLead }) {
   const host = lead.domain.replace(/^www\./, '')
-  const [tld, ...parts] = host.split('.').reverse()
-  const name = parts.reverse().join('.')
+  const isActive = lead.status === 'processing'
 
   return (
-    <div className="group bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 hover:border-slate-600 hover:bg-slate-800/60 transition-all duration-200 cursor-default">
+    <div className={`group bg-slate-900 border rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-default ${
+      isActive
+        ? 'border-blue-500/60 bg-slate-800/80 animate-pulse shadow-[0_0_12px_2px_rgba(59,130,246,0.15)]'
+        : 'border-slate-800 hover:border-slate-600 hover:bg-slate-800/60'
+    }`}>
       {/* Top row: globe icon + domain */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
-          <Globe className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-400 transition-colors" />
+          <Globe className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400 animate-spin' : 'text-slate-500 group-hover:text-slate-400'}`} />
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-200 truncate leading-snug">{name}</p>
-          <p className="text-[11px] text-slate-500">.{tld}</p>
-        </div>
+        <p className="text-sm font-semibold text-slate-200 truncate leading-snug">{host}</p>
       </div>
 
       {/* Bottom: vertical left, status right */}
