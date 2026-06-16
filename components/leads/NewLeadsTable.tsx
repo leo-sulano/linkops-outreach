@@ -60,7 +60,7 @@ function StatusIndicator({ status }: { status: string }) {
 }
 
 function LeadCard({ lead }: { lead: NewLead }) {
-  const host = lead.domain.replace(/^www\./, '')
+  const host = lead.domain.trim().replace(/^www\./, '')
   const isActive = lead.status === 'processing'
 
   return (
@@ -74,7 +74,7 @@ function LeadCard({ lead }: { lead: NewLead }) {
         <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
           <Globe className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400 animate-spin' : 'text-slate-500 group-hover:text-slate-400'}`} />
         </div>
-        <p className="text-sm font-semibold text-slate-200 truncate leading-snug">{host}</p>
+        <p className="text-sm font-semibold text-slate-200 truncate whitespace-nowrap leading-snug">{host}</p>
       </div>
 
       {/* Bottom: vertical left, status right */}
