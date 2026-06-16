@@ -26,21 +26,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (action === 'start') {
       // Flip any paused jobs back to pending so the worker picks them up
-      const { count } = await sb
+      const { data, error } = await sb
         .from('lead_jobs')
         .update({ status: 'pending' })
         .eq('status', 'paused')
-      return res.status(200).json({ started: true, resumed: count ?? 0 })
+        .select('id')
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ started: true, resumed: data?.length ?? 0 })
     }
 
     if (action === 'stop') {
       // Flip pending jobs to paused so the worker stops picking up new ones,
       // and reset any in-flight processing jobs so their results are abandoned.
-      const [{ count: pausedPending }, { count: pausedProcessing }] = await Promise.all([
-        sb.from('lead_jobs').update({ status: 'paused' }).eq('status', 'pending'),
-        sb.from('lead_jobs').update({ status: 'paused', started_at: null }).eq('status', 'processing'),
+      const [
+        { data: pendingData, error: pendingErr },
+        { data: processingData, error: processingErr },
+      ] = await Promise.all([
+        sb.from('lead_jobs').update({ status: 'paused' }).eq('status', 'pending').select('id'),
+        sb.from('lead_jobs').update({ status: 'paused', started_at: null }).eq('status', 'processing').select('id'),
       ])
-      return res.status(200).json({ stopped: true, paused: (pausedPending ?? 0) + (pausedProcessing ?? 0) })
+      if (pendingErr) return res.status(500).json({ error: pendingErr.message })
+      if (processingErr) return res.status(500).json({ error: processingErr.message })
+      const paused = (pendingData?.length ?? 0) + (processingData?.length ?? 0)
+      return res.status(200).json({ stopped: true, paused })
     }
 
     return res.status(400).json({ error: 'Invalid action' })
