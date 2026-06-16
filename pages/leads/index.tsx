@@ -282,14 +282,14 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
       {/* New leads list */}
       <div className="mt-6">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        <h2 className="text-lg font-bold text-slate-100 mb-4">
           New Leads ({leads.length})
         </h2>
         {leads.length === 0 ? (
           <p className="text-slate-600 text-sm italic">No new affiliate domains to process.</p>
         ) : (
           <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-3 px-4 py-2 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="grid grid-cols-3 px-4 py-2 border-b border-slate-700 text-xs font-medium text-slate-400 uppercase tracking-wider">
               <span>Domain</span>
               <span>Vertical</span>
               <span className="text-right">Status</span>
