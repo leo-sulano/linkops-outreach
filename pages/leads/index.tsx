@@ -267,31 +267,25 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       {/* Stats */}
       <StatsCards stats={stats} />
 
-      {/* Active scraping queue */}
-      {activeJobs.length > 0 && (
+      {/* Active scraping queue — processing only */}
+      {processingJobs.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Scraping Queue ({activeJobs.length})
+            Now Scraping ({processingJobs.length})
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            {activeJobs.map((job) => (
+          <div className="flex flex-col gap-1.5">
+            {processingJobs.map((job) => (
               <div
                 key={job.domain}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm ${
-                  job.status === 'processing'
-                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-400'
-                }`}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
               >
-                {job.status === 'processing' ? (
-                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse flex-shrink-0" />
-                ) : (
-                  <span className="w-2 h-2 rounded-full bg-slate-600 flex-shrink-0" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                <span className="truncate flex-1 font-mono">{job.domain}</span>
+                {job.current_page && (
+                  <span className="text-xs text-slate-500 flex-shrink-0 truncate">
+                    · {job.current_page}
+                  </span>
                 )}
-                <span className="truncate flex-1">{job.domain}</span>
-                <span className="text-xs flex-shrink-0 opacity-60">
-                  {job.status === 'processing' ? 'Scraping…' : 'Queued'}
-                </span>
               </div>
             ))}
           </div>
