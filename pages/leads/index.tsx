@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Play, Loader2, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
-import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
+import { JobStatusBadge, JobStatus } from '@/components/leads/JobStatusRow'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
 
 interface NewLead {
@@ -44,7 +44,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
   const [leads, setLeads] = useState<NewLead[]>([])
-  const [isProcessing, setIsProcessing] = useState(false)
 
   const checkWorker = useCallback(async () => {
     try {
@@ -97,23 +96,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       setMessage('Failed to queue leads.')
     } finally {
       setLoadingAction(null)
-    }
-  }
-
-  async function handleProcessLeads() {
-    setIsProcessing(true)
-    try {
-      const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
-      const data = await res.json()
-      setMessage(data.queued > 0 ? `✓ ${data.queued} new domains queued.` : (data.message ?? 'No new leads to process.'))
-      if (data.queued > 0) {
-        fetchActiveJobs()
-        fetchLeads()
-      }
-    } catch {
-      setMessage('Failed to queue leads.')
-    } finally {
-      setIsProcessing(false)
     }
   }
 
@@ -192,7 +174,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
-            {loadingAction === 'start' ? (
+            {(workerRunning || loadingAction === 'start') ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Play className="w-4 h-4 fill-current" />
@@ -298,13 +280,36 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         </div>
       )}
 
-      {/* Leads table */}
+      {/* New leads list */}
       <div className="mt-6">
-        <NewLeadsTable
-          leads={leads}
-          isProcessing={isProcessing}
-          onProcess={handleProcessLeads}
-        />
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          New Leads ({leads.length})
+        </h2>
+        {leads.length === 0 ? (
+          <p className="text-slate-600 text-sm italic">No new affiliate domains to process.</p>
+        ) : (
+          <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-3 px-4 py-2 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <span>Domain</span>
+              <span>Vertical</span>
+              <span className="text-right">Status</span>
+            </div>
+            <div className="divide-y divide-slate-800">
+              {leads.map((lead) => (
+                <div
+                  key={lead.domain}
+                  className="grid grid-cols-3 items-center px-4 py-2.5 hover:bg-slate-800/50"
+                >
+                  <span className="text-sm font-mono text-slate-200 truncate">{lead.domain}</span>
+                  <span className="text-sm text-slate-400">{lead.vertical ?? '—'}</span>
+                  <div className="flex justify-end">
+                    <JobStatusBadge status={(lead.status as JobStatus) || 'unprocessed'} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
