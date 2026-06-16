@@ -1,9 +1,9 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Play, Loader2, Square } from 'lucide-react'
+import { Play, Loader2, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
-import { JobStatusBadge, JobStatus } from '@/components/leads/JobStatusRow'
+import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
 
 interface NewLead {
@@ -81,28 +81,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       clearInterval(jobsInterval)
     }
   }, [checkWorker, fetchActiveJobs, fetchLeads])
-
-  async function processNewLeads() {
-    setLoadingAction('process')
-    setMessage(null)
-    try {
-      const res = await fetch('/api/leads/process', { method: 'POST', headers: API_HEADERS })
-      const data = await res.json()
-      if (data.queued > 0) {
-        setMessage(data.scrapingPaused
-          ? `✓ ${data.queued} domains queued (scraping is stopped — click Start Scraping to begin).`
-          : `✓ ${data.queued} new domains queued.`)
-        fetchActiveJobs()
-        fetchLeads()
-      } else {
-        setMessage(data.message ?? 'No new leads to process.')
-      }
-    } catch {
-      setMessage('Failed to queue leads.')
-    } finally {
-      setLoadingAction(null)
-    }
-  }
 
   async function handleProcessLeads() {
     setIsProcessing(true)
@@ -296,46 +274,13 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         </div>
       )}
 
-      {/* New leads list */}
+      {/* New leads */}
       <div className="mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-100">
-            New Leads ({leads.length})
-          </h2>
-          <button
-            onClick={handleProcessLeads}
-            disabled={isProcessing || leads.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
-            {isProcessing ? 'Processing…' : 'Process New Leads'}
-          </button>
-        </div>
-        {leads.length === 0 ? (
-          <p className="text-slate-600 text-sm italic">No new affiliate domains to process.</p>
-        ) : (
-          <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-3 px-4 py-2 border-b border-slate-700 text-xs font-medium text-slate-400 uppercase tracking-wider">
-              <span>Domain</span>
-              <span>Vertical</span>
-              <span className="text-right">Status</span>
-            </div>
-            <div className="divide-y divide-slate-800">
-              {leads.map((lead) => (
-                <div
-                  key={lead.domain}
-                  className="grid grid-cols-3 items-center px-4 py-2.5 hover:bg-slate-800/50"
-                >
-                  <span className="text-sm font-mono text-slate-200 truncate">{lead.domain}</span>
-                  <span className="text-sm text-slate-400">{lead.vertical ?? '—'}</span>
-                  <div className="flex justify-end">
-                    <JobStatusBadge status={(lead.status as JobStatus) || 'unprocessed'} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <NewLeadsTable
+          leads={leads}
+          isProcessing={isProcessing}
+          onProcess={handleProcessLeads}
+        />
       </div>
     </div>
   )
