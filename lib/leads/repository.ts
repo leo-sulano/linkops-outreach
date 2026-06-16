@@ -34,7 +34,7 @@ export interface LeadJob {
   id: string
   run_id: string
   domain: string
-  status: 'pending' | 'processing' | 'completed' | 'needs_review' | 'failed'
+  status: 'pending' | 'processing' | 'completed' | 'needs_review' | 'failed' | 'paused'
   retry_count: number
   error_log: string | null
   started_at: string | null

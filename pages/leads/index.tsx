@@ -155,6 +155,10 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
         body: JSON.stringify({ action: 'stop' }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        setMessage(`Failed to stop scraping: ${data.error ?? res.statusText}`)
+        return
+      }
       setMessage(`Scraping stopped — ${data.paused} jobs paused. Click Start Scraping to resume.`)
       setWorkerRunning(false)
       fetchActiveJobs()

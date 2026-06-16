@@ -35,19 +35,26 @@ export function NewLeadsTable({
       {leads.length === 0 ? (
         <p className="text-slate-500 text-sm">No new affiliate domains to process.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {leads.map((lead) => (
-            <div
-              key={lead.domain}
-              className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-2 hover:border-slate-500 transition-colors"
-            >
-              <span className="text-sm font-mono text-slate-200 truncate">{lead.domain}</span>
-              <span className="text-xs text-slate-400">{lead.vertical ?? '—'}</span>
-              <div>
-                <JobStatusBadge status={(lead.status as JobStatus) || 'unprocessed'} />
+        <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+          <div className="grid grid-cols-3 px-4 py-2 border-b border-slate-700 text-xs font-medium text-slate-400 uppercase tracking-wider">
+            <span>Domain</span>
+            <span>Vertical</span>
+            <span className="text-right">Status</span>
+          </div>
+          <div className="divide-y divide-slate-800">
+            {leads.map((lead) => (
+              <div
+                key={lead.domain}
+                className="grid grid-cols-3 items-center px-4 py-2.5 hover:bg-slate-800/50"
+              >
+                <span className="text-sm font-mono text-slate-200 truncate">{lead.domain}</span>
+                <span className="text-sm text-slate-400">{lead.vertical ?? '—'}</span>
+                <div className="flex justify-end">
+                  <JobStatusBadge status={(lead.status as JobStatus) || 'unprocessed'} />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
