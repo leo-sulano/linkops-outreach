@@ -87,7 +87,7 @@ async function processJob(job: {
         job.domain,
         'Captcha Required'
       )
-      await sb.from('lead_jobs').update({ status: 'needs_review', completed_at: new Date().toISOString() }).eq('id', job.id)
+      await sb.from('lead_jobs').update({ status: 'needs_review', completed_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'processing')
       console.log(`[worker] ${job.domain} → captcha required`)
       return
     }
@@ -172,6 +172,7 @@ async function processJob(job: {
       .from('lead_jobs')
       .update({ status: finalStatus, completed_at: new Date().toISOString() })
       .eq('id', job.id)
+      .eq('status', 'processing') // no-op if job was stopped/reset mid-flight
 
     console.log(`[worker] ${job.domain} → ${finalStatus} | Data Collected: ${remark}`)
   } catch (err: any) {

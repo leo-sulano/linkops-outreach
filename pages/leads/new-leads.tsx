@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { GetServerSideProps } from 'next'
-import { Play, Loader2, Pause, Square } from 'lucide-react'
+import { Play, Loader2, Square } from 'lucide-react'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
 import { ProcessingModal } from '@/components/leads/ProcessingModal'
 import { readLeadsSheet } from '@/lib/leads/sheets-service'
@@ -100,8 +100,7 @@ export default function NewLeadsPage({
   const [error, setError] = useState<string | null>(null)
 
   const [workerRunning, setWorkerRunning] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [loadingAction, setLoadingAction] = useState<'start' | 'pause' | 'stop' | null>(null)
+  const [loadingAction, setLoadingAction] = useState<'start' | 'stop' | null>(null)
   const busy = loadingAction !== null
 
   const checkWorker = useCallback(async () => {
@@ -109,7 +108,6 @@ export default function NewLeadsPage({
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
-      setIsPaused(data.paused ?? false)
     } catch { /* ignore */ }
   }, [])
 
@@ -128,17 +126,6 @@ export default function NewLeadsPage({
         body: JSON.stringify({ action: 'start' }),
       })
       setWorkerRunning(true)
-      setIsPaused(false)
-    } catch { /* ignore */ }
-    finally { setLoadingAction(null) }
-  }
-
-  async function pauseScraping() {
-    setLoadingAction('pause')
-    try {
-      await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
-      setIsPaused(true)
-      setWorkerRunning(false)
     } catch { /* ignore */ }
     finally { setLoadingAction(null) }
   }
@@ -206,11 +193,9 @@ export default function NewLeadsPage({
 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : 'bg-slate-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
             {workerRunning
               ? `Scraping — ${processingCount} active, ${pendingCount} pending`
-              : isPaused
-              ? 'Paused'
               : 'Idle'}
           </span>
 
@@ -225,15 +210,6 @@ export default function NewLeadsPage({
               <Play className="w-4 h-4 fill-current" />
             )}
             Start Scraping
-          </button>
-
-          <button
-            onClick={pauseScraping}
-            disabled={busy}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
-          >
-            <Pause className={`w-4 h-4 ${isPaused ? 'fill-current' : ''}`} />
-            Pause
           </button>
 
           <button

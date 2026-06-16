@@ -34,12 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (action === 'stop') {
-      // Flip pending jobs to paused so the worker stops picking up new ones
-      const { count } = await sb
-        .from('lead_jobs')
-        .update({ status: 'paused' })
-        .eq('status', 'pending')
-      return res.status(200).json({ stopped: true, paused: count ?? 0 })
+      // Flip pending jobs to paused so the worker stops picking up new ones,
+      // and reset any in-flight processing jobs so their results are abandoned.
+      const [{ count: pausedPending }, { count: pausedProcessing }] = await Promise.all([
+        sb.from('lead_jobs').update({ status: 'paused' }).eq('status', 'pending'),
+        sb.from('lead_jobs').update({ status: 'paused', started_at: null }).eq('status', 'processing'),
+      ])
+      return res.status(200).json({ stopped: true, paused: (pausedPending ?? 0) + (pausedProcessing ?? 0) })
     }
 
     return res.status(400).json({ error: 'Invalid action' })

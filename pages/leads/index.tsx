@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Play, Loader2, Pause, Square } from 'lucide-react'
+import { RefreshCw, Play, Loader2, Square } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { LeadStats, getLeadStats } from '@/lib/leads/repository'
@@ -30,9 +30,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [showWorkerModal, setShowWorkerModal] = useState(false)
-  const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'pause' | 'stop' | null>(null)
+  const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'stop' | null>(null)
   const busy = loadingAction !== null
   const [message, setMessage] = useState<string | null>(null)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
@@ -42,7 +41,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
-      setIsPaused(data.paused ?? false)
     } catch { /* ignore */ }
   }, [])
 
@@ -92,27 +90,9 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const data = await res.json()
       setMessage(data.resumed > 0 ? `Scraping resumed — ${data.resumed} jobs unpaused.` : 'Scraping active.')
       setWorkerRunning(true)
-      setIsPaused(false)
       fetchActiveJobs()
     } catch {
       setMessage('Failed to start scraping.')
-    } finally {
-      setLoadingAction(null)
-    }
-  }
-
-  async function pauseScraping() {
-    setLoadingAction('pause')
-    setMessage(null)
-    try {
-      const res = await fetch('/api/leads/cancel-queue', { method: 'POST', headers: API_HEADERS })
-      const data = await res.json()
-      setMessage(`Paused — ${data.cancelled} jobs held. Click Start Scraping to resume.`)
-      setIsPaused(true)
-      setWorkerRunning(false)
-      fetchActiveJobs()
-    } catch {
-      setMessage('Failed to pause queue.')
     } finally {
       setLoadingAction(null)
     }
@@ -138,8 +118,10 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     }
   }
 
-  const pendingCount = activeJobs.filter((j) => j.status === 'pending').length
-  const processingCount = activeJobs.filter((j) => j.status === 'processing').length
+  const pendingJobs = activeJobs.filter((j) => j.status === 'pending')
+  const processingJobs = activeJobs.filter((j) => j.status === 'processing')
+  const pendingCount = pendingJobs.length
+  const processingCount = processingJobs.length
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
@@ -149,11 +131,9 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : isPaused ? 'bg-amber-400' : pendingCount > 0 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : pendingCount > 0 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
             {workerRunning
               ? `Scraping — ${processingCount} active, ${pendingCount} pending`
-              : isPaused
-              ? `Paused — ${pendingCount} jobs held`
               : pendingCount > 0
               ? `Worker not running — ${pendingCount} jobs waiting`
               : 'Idle'}
@@ -182,15 +162,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           </button>
 
           <button
-            onClick={pauseScraping}
-            disabled={busy}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
-          >
-            <Pause className={`w-4 h-4 ${isPaused ? 'fill-current' : ''}`} />
-            Pause
-          </button>
-
-          <button
             onClick={stopScraping}
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
@@ -216,6 +187,46 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           onCancel={() => setShowWorkerModal(false)}
         />
       )}
+
+      {/* Live Monitor */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 px-4 py-3 rounded-lg bg-slate-900 border border-slate-700">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`w-2.5 h-2.5 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {workerRunning ? 'Worker Active' : 'Worker Idle'}
+          </span>
+        </div>
+
+        <div className="w-px h-4 bg-slate-700 hidden sm:block flex-shrink-0" />
+
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs text-slate-500 flex-shrink-0">Now scraping:</span>
+          {processingJobs.length > 0 ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 flex-shrink-0" />
+              <span className="text-sm font-mono text-indigo-300 truncate">{processingJobs[0].domain}</span>
+              {processingJobs.length > 1 && (
+                <span className="text-xs text-slate-500 flex-shrink-0">+{processingJobs.length - 1} more</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-slate-600 italic">—</span>
+          )}
+        </div>
+
+        {pendingCount > 0 && (
+          <>
+            <div className="w-px h-4 bg-slate-700 hidden sm:block flex-shrink-0" />
+            <span className="text-xs text-slate-400 flex-shrink-0">
+              <span className="font-semibold text-slate-300">{pendingCount}</span> in queue
+            </span>
+          </>
+        )}
+
+        {activeJobs.length === 0 && !workerRunning && (
+          <span className="text-xs text-slate-600 italic ml-1">No active jobs</span>
+        )}
+      </div>
 
       {/* Stats */}
       <StatsCards stats={stats} />
