@@ -167,7 +167,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function scrapeDomain(domain: string): Promise<ScrapeResult & { captchaRequired?: boolean }> {
+export async function scrapeDomain(
+  domain: string,
+  onPageVisit?: (path: string) => Promise<void> | void,
+): Promise<ScrapeResult & { captchaRequired?: boolean }> {
   const options = new Options()
   options.addArguments(
     '--headless=new',
@@ -224,6 +227,10 @@ export async function scrapeDomain(domain: string): Promise<ScrapeResult & { cap
     let discoveredPaths: string[] = []
 
     const visitPage = async (url: string, isHomepage: boolean) => {
+      try {
+        const path = isHomepage ? '/' : (new URL(url).pathname || '/')
+        await onPageVisit?.(path)
+      } catch { /* non-critical */ }
       await driver.get(url)
 
       if (isHomepage) {

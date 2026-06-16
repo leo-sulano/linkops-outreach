@@ -78,7 +78,12 @@ async function processJob(job: {
   console.log(`[worker] Processing ${job.domain} (attempt ${job.retry_count + 1})`)
 
   try {
-    const { html, text, contactText, links, captchaRequired } = await scrapeDomain(job.domain)
+    const { html, text, contactText, links, captchaRequired } = await scrapeDomain(
+      job.domain,
+      async (path) => {
+        await sb.from('lead_jobs').update({ current_page: path }).eq('id', job.id)
+      },
+    )
 
     if (captchaRequired) {
       await markLeadDataCollected(
@@ -87,7 +92,7 @@ async function processJob(job: {
         job.domain,
         'Captcha Required'
       )
-      await sb.from('lead_jobs').update({ status: 'needs_review', completed_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'processing')
+      await sb.from('lead_jobs').update({ status: 'needs_review', completed_at: new Date().toISOString(), current_page: null }).eq('id', job.id).eq('status', 'processing')
       console.log(`[worker] ${job.domain} → captcha required`)
       return
     }
@@ -170,7 +175,7 @@ async function processJob(job: {
     const finalStatus = nameIsTooLong ? 'needs_review' : 'completed'
     await sb
       .from('lead_jobs')
-      .update({ status: finalStatus, completed_at: new Date().toISOString() })
+      .update({ status: finalStatus, completed_at: new Date().toISOString(), current_page: null })
       .eq('id', job.id)
       .eq('status', 'processing') // no-op if job was stopped/reset mid-flight
 

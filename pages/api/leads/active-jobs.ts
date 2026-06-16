@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sb = getSupabaseAdminClient()
     const { data: jobs } = await sb
       .from('lead_jobs')
-      .select('domain, status')
+      .select('domain, status, current_page')
       .in('status', ['pending', 'processing'])
       .order('created_at', { ascending: true })
 

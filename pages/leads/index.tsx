@@ -13,6 +13,7 @@ const API_HEADERS = {
 interface ActiveJob {
   domain: string
   status: 'pending' | 'processing'
+  current_page?: string | null
 }
 
 export const getServerSideProps: GetServerSideProps = async () => {
@@ -205,6 +206,11 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             <div className="flex items-center gap-1.5 min-w-0">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 flex-shrink-0" />
               <span className="text-sm font-mono text-indigo-300 truncate">{processingJobs[0].domain}</span>
+              {processingJobs[0].current_page && (
+                <span className="text-xs font-mono text-slate-500 flex-shrink-0 truncate">
+                  · {processingJobs[0].current_page}
+                </span>
+              )}
               {processingJobs.length > 1 && (
                 <span className="text-xs text-slate-500 flex-shrink-0">+{processingJobs.length - 1} more</span>
               )}
@@ -214,14 +220,6 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
           )}
         </div>
 
-        {pendingCount > 0 && (
-          <>
-            <div className="w-px h-4 bg-slate-700 hidden sm:block flex-shrink-0" />
-            <span className="text-xs text-slate-400 flex-shrink-0">
-              <span className="font-semibold text-slate-300">{pendingCount}</span> in queue
-            </span>
-          </>
-        )}
 
         {activeJobs.length === 0 && !workerRunning && (
           <span className="text-xs text-slate-600 italic ml-1">No active jobs</span>
