@@ -79,7 +79,7 @@ export async function aiExtract(
     sections.push(`=== CONTACT/ABOUT PAGES ===\n${truncate(contactText, 3000)}`)
   }
 
-  const mainText = text.replace(contactText, '').trim()
+  const mainText = (contactText.length > 0 ? text.replace(contactText, '') : text).trim()
   if (mainText) {
     sections.push(`=== MAIN SITE TEXT ===\n${truncate(mainText, 2000)}`)
   }
@@ -105,7 +105,12 @@ export async function aiExtract(
   })
 
   const raw = response.choices[0]?.message?.content ?? '{}'
-  const parsed = JSON.parse(raw)
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = {}
+  }
 
   return {
     company_name: parsed.company_name ?? null,
