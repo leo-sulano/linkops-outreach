@@ -5,6 +5,7 @@ import { readLeadsSheet } from '@/lib/leads/sheets-service'
 import {
   upsertLeads,
   getAlreadyQueuedDomains,
+  getExistingContactDomains,
   removeStalePendingJobs,
   insertPendingJobs,
   isScrapingPaused,
@@ -29,8 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Strip data_collected — that column lives in Google Sheets only, not in Supabase
     await upsertLeads(affiliates.map(({ data_collected: _, ...rest }) => rest))
 
-    // Skip any row that already has a value in the Data Collected column
-    const uncollected = affiliates.filter((l) => !l.data_collected?.trim())
+    // Use lead_contacts as the source of truth for what's already been scraped.
+    // This means a reset (which clears lead_contacts) automatically makes all
+    // domains eligible again, without depending on the Google Sheets H column.
+    const existingContacts = await getExistingContactDomains()
+    const uncollected = affiliates.filter((l) => !existingContacts.has(l.domain))
 
     const qualifiedDomains = uncollected.map((l) => l.domain)
 
