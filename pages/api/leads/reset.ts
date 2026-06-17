@@ -21,15 +21,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const sb = getSupabaseAdminClient()
 
+    const skipped: string[] = []
     for (const table of TABLES_IN_ORDER) {
       let error: any
       if (table === 'sheet_contacts') {
-        // sheet_contacts uses row_index (int) not created_at
         ;({ error } = await sb.from(table).delete().gte('row_index', 0))
       } else {
         ;({ error } = await sb.from(table).delete().not('id', 'is', null))
       }
       if (error) {
+        // Table doesn't exist yet — skip silently
+        if (error.message?.includes('schema cache') || error.code === '42P01') {
+          skipped.push(table)
+          continue
+        }
         console.error(`[reset] Failed to clear ${table}:`, error.message)
         return res.status(500).json({ error: `Failed to clear ${table}: ${error.message}` })
       }
@@ -40,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const leadsTab = process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads'
     await clearDataCollectedColumn(spreadsheetId, leadsTab)
 
-    return res.status(200).json({ ok: true, message: 'All data cleared. Ready to start fresh.' })
+    return res.status(200).json({ ok: true, message: 'All data cleared. Ready to start fresh.', skipped })
   } catch (err: any) {
     console.error('[reset]', err)
     return res.status(500).json({ error: err.message ?? 'Internal server error' })
