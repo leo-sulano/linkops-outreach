@@ -1,5 +1,5 @@
 import { Builder, Browser, By, WebDriver } from 'selenium-webdriver'
-import { Options, ServiceBuilder } from 'selenium-webdriver/chrome'
+import { Options } from 'selenium-webdriver/chrome'
 import { dismissCookieBanners, runChallenges, detectCaptcha } from './challenges'
 import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson, extractContactFromSiteText } from '../lib/leads/enrichment'
 
@@ -215,11 +215,9 @@ export async function scrapeDomain(
     'profile.password_manager_enabled': false,
   })
 
-  const service = new ServiceBuilder().setStdio('ignore')
   const driver: WebDriver = await new Builder()
     .forBrowser(Browser.CHROME)
     .setChromeOptions(options)
-    .setChromeService(service)
     .build()
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
