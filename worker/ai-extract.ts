@@ -56,6 +56,33 @@ function mailtoLinks(html: string): string[] {
   return (html.match(/href="mailto:([^"]+)"/gi) ?? []).slice(0, 10)
 }
 
+function extractHtmlMetadata(html: string): string {
+  const parts: string[] = []
+  const ogSiteName = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']{2,60})["']/i)
+    ?? html.match(/<meta[^>]+content=["']([^"']{2,60})["'][^>]+property=["']og:site_name["']/i)
+  if (ogSiteName?.[1]) parts.push(`og:site_name: ${ogSiteName[1].trim()}`)
+
+  const title = html.match(/<title[^>]*>([^<]{2,80})<\/title>/i)
+  if (title?.[1]) parts.push(`page title: ${title[1].trim()}`)
+
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let m: RegExpExecArray | null
+  while ((m = scriptRe.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1])
+      const items = Array.isArray(data) ? data : [data]
+      for (const item of items) {
+        if (['Organization', 'Corporation', 'LocalBusiness'].includes(item?.['@type']) && item.name) {
+          parts.push(`JSON-LD organization name: ${item.name}`)
+          break
+        }
+      }
+    } catch { /* skip malformed */ }
+  }
+
+  return parts.length > 0 ? parts.join('\n') : ''
+}
+
 let client: OpenAI | null = null
 
 function getClient(): OpenAI {
@@ -74,6 +101,11 @@ export async function aiExtract(
   links: string[]
 ): Promise<AIExtractResult> {
   const sections: string[] = []
+
+  const htmlMeta = extractHtmlMetadata(html)
+  if (htmlMeta) {
+    sections.push(`=== HTML METADATA ===\n${htmlMeta}`)
+  }
 
   if (contactText.trim()) {
     sections.push(`=== CONTACT/ABOUT PAGES ===\n${truncate(contactText, 3000)}`)
