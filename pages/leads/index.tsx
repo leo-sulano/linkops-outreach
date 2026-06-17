@@ -38,6 +38,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
+  const [workerCounts, setWorkerCounts] = useState({ processing: 0, pending: 0 })
   const [showWorkerModal, setShowWorkerModal] = useState(false)
   const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'stop' | 'reset' | null>(null)
   const busy = loadingAction !== null
@@ -52,6 +53,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
       setWorkerRunning(data.running)
+      setWorkerCounts({ processing: data.processing ?? 0, pending: data.pending ?? 0 })
     } catch { /* ignore */ }
   }, [])
 
@@ -117,8 +119,8 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
       })
       const data = await res.json()
       setMessage(data.resumed > 0 ? `Scraping resumed — ${data.resumed} jobs unpaused.` : 'Scraping active.')
-      setWorkerRunning(true)
       fetchActiveJobs()
+      await checkWorker()
     } catch {
       setMessage('Failed to start scraping.')
     } finally {
@@ -174,8 +176,8 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
 
   const pendingJobs = activeJobs.filter((j) => j.status === 'pending')
   const processingJobs = activeJobs.filter((j) => j.status === 'processing')
-  const pendingCount = pendingJobs.length
-  const processingCount = processingJobs.length
+  const pendingCount = workerCounts.pending
+  const processingCount = workerCounts.processing
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">

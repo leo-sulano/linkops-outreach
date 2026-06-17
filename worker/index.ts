@@ -185,12 +185,13 @@ async function processJob(job: {
     console.error(`[worker] ${job.domain} failed: ${msg}`)
 
     const newRetry = job.retry_count + 1
-    const isLastRetry = newRetry >= MAX_RETRIES
+    const isSiteUnreachable = msg.toLowerCase().includes('net::') || msg.toLowerCase().includes('err_name_not_resolved')
+    const isLastRetry = newRetry >= MAX_RETRIES || isSiteUnreachable
 
     // On final retry failure, write the reason to Data Collected column
     if (isLastRetry) {
-      const reason = msg.toLowerCase().includes('timeout') ? 'Site timeout'
-        : msg.toLowerCase().includes('err_name_not_resolved') || msg.toLowerCase().includes('net::') ? 'Site unreachable'
+      const reason = isSiteUnreachable ? 'No data found'
+        : msg.toLowerCase().includes('timeout') ? 'Site timeout'
         : `Error: ${msg.slice(0, 60)}`
       try {
         await markLeadDataCollected(
@@ -202,12 +203,14 @@ async function processJob(job: {
       } catch { /* don't let sheet write block job update */ }
     }
 
+    const finalStatus = isLastRetry ? (isSiteUnreachable ? 'completed' : 'failed') : 'pending'
     await sb
       .from('lead_jobs')
       .update({
-        status: isLastRetry ? 'failed' : 'pending',
+        status: finalStatus,
         retry_count: newRetry,
         error_log: msg,
+        ...(isLastRetry && { completed_at: new Date().toISOString(), current_page: null }),
       })
       .eq('id', job.id)
       .eq('status', 'processing')

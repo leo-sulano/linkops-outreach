@@ -233,6 +233,12 @@ export async function scrapeDomain(
       } catch { /* non-critical */ }
       await driver.get(url)
 
+      // Detect Chrome error pages (DNS failure, connection refused, etc.)
+      const currentUrl = await driver.getCurrentUrl()
+      if (currentUrl.startsWith('chrome-error://') || currentUrl.startsWith('about:neterror')) {
+        throw new Error(`net::ERR_SITE_UNREACHABLE: ${url}`)
+      }
+
       if (isHomepage) {
         const { captchaRequired } = await runChallenges(driver)
         if (captchaRequired) return 'captcha'
@@ -295,7 +301,10 @@ export async function scrapeDomain(
           }
         } catch { /* invalid url */ }
       }
-    } catch { /* homepage failed */ }
+    } catch (e: any) {
+      if (e?.message?.includes('net::')) throw e // site unreachable — propagate to caller
+      /* homepage failed */
+    }
 
     // --- Static subpages (skip homepage already done) ---
     for (const subpath of STATIC_SUBPAGES.slice(1)) {
