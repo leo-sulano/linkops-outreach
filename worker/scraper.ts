@@ -293,7 +293,7 @@ export async function scrapeDomain(
     // --- Homepage ---
     try {
       const result = await visitPage(baseUrl, true)
-      if (result === 'captcha') return { html: '', text: '', links: [], captchaRequired: true }
+      if (result === 'captcha') return { html: '', text: '', contactText: '', links: [], captchaRequired: true }
 
       // Discover same-domain links matching keywords
       const sameDomain = Array.from(allLinks).filter((href) => {
