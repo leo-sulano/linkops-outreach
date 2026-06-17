@@ -4,7 +4,7 @@ dotenv.config({ path: '../.env.local' })
 import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
-import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson, extractContactFromSiteText } from '../lib/leads/enrichment'
+import { aiExtract, regexExtract, AIExtractResult } from './ai-extract'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 
 const POLL_INTERVAL_MS = 5_000
@@ -97,31 +97,30 @@ async function processJob(job: {
       return
     }
 
-    const company_name = extractCompanyName(text, html)
-    // mailto: links from HTML source first (avoids tracker/JS addresses); fall back to rendered body text
-    const company_email = extractMailtoEmail(html) ?? extractEmail(text, contactText)
-    const company_linkedin = extractLinkedInCompany(links)
-    const person_linkedin_from_site = extractLinkedInPerson(links)
+    // AI extraction — regex fallback fires silently if AI call fails
+    let extracted: AIExtractResult
+    try {
+      extracted = await aiExtract(html, text, contactText, links)
+      console.log(`[worker] ${job.domain} → AI extraction OK`)
+    } catch (err: any) {
+      console.warn(`[worker] ${job.domain} → AI failed, using regex fallback: ${err.message}`)
+      extracted = regexExtract(html, text, contactText, links)
+    }
 
-    // Step 1: Try to extract name/role from the site's own About/Team pages (fast, no rate limits)
-    const siteContact = extractContactFromSiteText(contactText)
-    let contact_name: string | null = siteContact.name
-    let contact_role: string | null = siteContact.role
-    let contact_linkedin: string | null = null
+    const company_name = extracted.company_name
+    const company_email = extracted.company_email
+    const company_linkedin = extracted.company_linkedin
+    const company_type = extracted.company_type
+    let contact_name = extracted.contact_name
+    let contact_role = extracted.contact_role
+    let contact_linkedin = extracted.contact_linkedin
 
-    if (company_linkedin) {
-      if (!contact_name) {
-        // Site text didn't yield a name — fall back to LinkedIn scraping
-        const li = await discoverLinkedInContact(company_linkedin)
-        contact_name = li.contact_name
-        contact_role = li.contact_role
-        contact_linkedin = li.contact_linkedin ?? person_linkedin_from_site
-      } else {
-        // Name found on site; use any personal LinkedIn link found on the site
-        contact_linkedin = person_linkedin_from_site
-      }
-    } else if (person_linkedin_from_site) {
-      contact_linkedin = person_linkedin_from_site
+    // LinkedIn scraping fallback: AI found a company page but no contact name
+    if (company_linkedin && !contact_name) {
+      const li = await discoverLinkedInContact(company_linkedin)
+      contact_name = li.contact_name
+      contact_role = li.contact_role
+      contact_linkedin = li.contact_linkedin ?? extracted.contact_linkedin
     }
 
     const { data: lead } = await sb
@@ -133,7 +132,7 @@ async function processJob(job: {
     const contact = {
       domain: job.domain,
       vertical: lead?.vertical ?? null,
-      company_type: null,
+      company_type,
       company_name,
       company_email,
       company_linkedin,
