@@ -1,6 +1,7 @@
 import { Builder, Browser, By, WebDriver } from 'selenium-webdriver'
 import { Options, ServiceBuilder } from 'selenium-webdriver/chrome'
 import { dismissCookieBanners, runChallenges, detectCaptcha } from './challenges'
+import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson, extractContactFromSiteText } from '../lib/leads/enrichment'
 
 // Always-visit paths (checked on every domain)
 const STATIC_SUBPAGES = [
@@ -167,6 +168,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// Exit early when we have email + company name + at least one of (LinkedIn or contact name).
+// Pages are visited in priority order so this fires as soon as the data is complete.
+function hasEnoughData(
+  html: string,
+  textChunks: string[],
+  contactTextChunks: string[],
+  links: Set<string>
+): boolean {
+  const text = textChunks.join('\n\n')
+  const contactText = contactTextChunks.join('\n\n')
+  const linkArr = Array.from(links)
+  const email = extractMailtoEmail(html) ?? extractEmail(text, contactText)
+  const name = extractCompanyName(text, html)
+  if (!email || !name) return false
+  const linkedin = extractLinkedInCompany(linkArr) ?? extractLinkedInPerson(linkArr)
+  const contactName = extractContactFromSiteText(contactText).name
+  return !!(linkedin || contactName)
+}
+
 export async function scrapeDomain(
   domain: string,
   onPageVisit?: (path: string) => Promise<void> | void,
@@ -308,6 +328,7 @@ export async function scrapeDomain(
 
     // --- Static subpages (skip homepage already done) ---
     for (const subpath of STATIC_SUBPAGES.slice(1)) {
+      if (hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
       try {
         await visitPage(`${baseUrl}${subpath}`, false)
       } catch { /* page not found or timeout — skip */ }
@@ -315,6 +336,7 @@ export async function scrapeDomain(
 
     // --- Discovered pages ---
     for (const url of discoveredPaths) {
+      if (hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
       try {
         await visitPage(url, false)
       } catch { /* skip */ }
