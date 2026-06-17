@@ -36,6 +36,7 @@ Return ONLY valid JSON matching this exact schema — no extra keys, no markdown
 }
 
 Rules:
+- company_name: footer copyright notices often contain the legal name (e.g. "Copyright BrokerChooser Ltd. 2026") — extract only the company name, never the word "Copyright" or "©"
 - company_email: extract even if written as "name [at] domain [dot] com" format
 - company_linkedin: must be a full linkedin.com/company/ URL, or null
 - contact_linkedin: must be a full linkedin.com/in/ URL, or null
@@ -78,6 +79,19 @@ function extractHtmlMetadata(html: string): string {
         }
       }
     } catch { /* skip malformed */ }
+  }
+
+  // Footer copyright line — strip tags then extract "© Year Company" or "Copyright Company Ltd. Year"
+  const stripped = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+  const copyrightMatch = stripped.match(
+    /(?:©\s*(?:\d{4}\s*[-–]?\s*\d{0,4}\s+)?|Copyright\s+©?\s*(?:\d{4}\s*[-–]?\s*\d{0,4}\s+)?)([A-Z][A-Za-z0-9\s,.'&+!-]{2,60}?)(?:\s+\d{4}|\s*\.?\s*(?:All\s+[Rr]ights|[Rr]ights?\s+[Rr]eserved)|$)/im
+  )
+  if (copyrightMatch?.[1]) {
+    const name = copyrightMatch[1].trim()
+      .replace(/^(?:copyright\s*|©\s*)+/i, '')
+      .replace(/[.,]+$/, '')
+      .trim()
+    if (name.length >= 2 && name.length <= 80) parts.push(`footer copyright: ${name}`)
   }
 
   return parts.length > 0 ? parts.join('\n') : ''
