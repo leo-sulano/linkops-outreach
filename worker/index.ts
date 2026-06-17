@@ -46,6 +46,14 @@ async function resetStuckJobs() {
 
 async function claimPendingJobs(count: number) {
   const sb = getSupabase()
+
+  // Enforce strict serial execution: don't claim if any job is still in-flight
+  const { count: activeCount } = await sb
+    .from('lead_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'processing')
+  if ((activeCount ?? 0) > 0) return []
+
   const { data } = await sb
     .from('lead_jobs')
     .select('*')
