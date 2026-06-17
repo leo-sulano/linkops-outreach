@@ -94,6 +94,10 @@ export async function aiExtract(
     sections.push(`=== MAILTO LINKS ===\n${ml.join('\n')}`)
   }
 
+  if (sections.length === 0) {
+    throw new Error('No extractable content — skipping AI call')
+  }
+
   const response = await getClient().chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [

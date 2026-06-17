@@ -6,6 +6,7 @@ import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
 import { aiExtract, regexExtract, AIExtractResult } from './ai-extract'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
+import { extractLinkedInPerson } from '../lib/leads/enrichment'
 
 const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 5_000
@@ -121,6 +122,11 @@ async function processJob(job: {
       contact_name = li.contact_name
       contact_role = li.contact_role
       contact_linkedin = li.contact_linkedin ?? extracted.contact_linkedin
+    }
+
+    // Personal LinkedIn fallback: if AI missed a /in/ link present in raw HTML links
+    if (!contact_linkedin) {
+      contact_linkedin = extractLinkedInPerson(links)
     }
 
     const { data: lead } = await sb
