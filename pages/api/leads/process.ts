@@ -6,6 +6,7 @@ import {
   upsertLeads,
   getAlreadyQueuedDomains,
   getExistingContactDomains,
+  deleteContactsForDomains,
   removeStalePendingJobs,
   insertPendingJobs,
   isScrapingPaused,
@@ -31,9 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await upsertLeads(affiliates.map(({ data_collected: _, ...rest }) => rest))
 
     // Use lead_contacts as the source of truth for what's already been scraped.
-    // This means a reset (which clears lead_contacts) automatically makes all
-    // domains eligible again, without depending on the Google Sheets H column.
+    // If an affiliate's data_collected column was cleared in the sheet (blank),
+    // delete its contact record so it becomes eligible for re-scraping.
     const existingContacts = await getExistingContactDomains()
+    const resetDomains = affiliates
+      .filter((l) => !l.data_collected && existingContacts.has(l.domain))
+      .map((l) => l.domain)
+    if (resetDomains.length > 0) {
+      await deleteContactsForDomains(resetDomains)
+      resetDomains.forEach((d) => existingContacts.delete(d))
+    }
+
     const uncollected = affiliates.filter((l) => !existingContacts.has(l.domain))
 
     const qualifiedDomains = uncollected.map((l) => l.domain)

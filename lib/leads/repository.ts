@@ -64,6 +64,13 @@ export async function getExistingContactDomains(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.domain))
 }
 
+export async function deleteContactsForDomains(domains: string[]): Promise<void> {
+  if (domains.length === 0) return
+  const sb = getSupabaseAdminClient()
+  const { error } = await sb.from('lead_contacts').delete().in('domain', domains)
+  if (error) throw new Error(`deleteContactsForDomains: ${error.message}`)
+}
+
 // Returns domains that already have an active job (pending, processing, or paused — don't re-queue these)
 export async function getAlreadyQueuedDomains(): Promise<Set<string>> {
   const sb = getSupabaseAdminClient()
