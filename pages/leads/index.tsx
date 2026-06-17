@@ -1,6 +1,6 @@
 import { GetServerSideProps } from 'next'
 import { useState, useEffect, useCallback } from 'react'
-import { PlayCircle, Loader2, StopCircle, Globe } from 'lucide-react'
+import { PlayCircle, Loader2, StopCircle, Globe, Trash2 } from 'lucide-react'
 import { StatsCards } from '@/components/leads/StatsCards'
 import { WorkerSetupModal } from '@/components/leads/WorkerSetupModal'
 import { NewLeadsTable } from '@/components/leads/NewLeadsTable'
@@ -39,9 +39,10 @@ export const getServerSideProps: GetServerSideProps = async () => {
 export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [showWorkerModal, setShowWorkerModal] = useState(false)
-  const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'stop' | null>(null)
+  const [loadingAction, setLoadingAction] = useState<'process' | 'start' | 'stop' | 'reset' | null>(null)
   const busy = loadingAction !== null
   const [message, setMessage] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
   const [leads, setLeads] = useState<NewLead[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -125,6 +126,27 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     }
   }
 
+  async function handleReset() {
+    setLoadingAction('reset')
+    setMessage(null)
+    setConfirmReset(false)
+    try {
+      const res = await fetch('/api/leads/reset', { method: 'POST', headers: API_HEADERS })
+      const data = await res.json()
+      if (!res.ok) {
+        setMessage(`Reset failed: ${data.error ?? res.statusText}`)
+        return
+      }
+      setMessage('All data cleared. Click "Process New Leads" to re-import from Google Sheets.')
+      setActiveJobs([])
+      setLeads([])
+    } catch {
+      setMessage('Reset failed.')
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   async function stopScraping() {
     setLoadingAction('stop')
     setMessage(null)
@@ -192,6 +214,37 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
             <StopCircle className="w-4 h-4" />
             Stop Scraping
           </button>
+
+          {confirmReset ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-red-400 font-medium">Delete all data?</span>
+              <button
+                onClick={handleReset}
+                disabled={busy}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold disabled:opacity-50 transition-colors"
+              >
+                {loadingAction === 'reset' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Yes, Reset
+              </button>
+              <button
+                onClick={() => setConfirmReset(false)}
+                disabled={busy}
+                className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmReset(true)}
+              disabled={busy}
+              title="Clear all leads, contacts, and job data"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-red-900 border border-slate-600 hover:border-red-700 text-slate-300 hover:text-red-300 text-sm font-medium disabled:opacity-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Reset All
+            </button>
+          )}
         </div>
       </div>
 

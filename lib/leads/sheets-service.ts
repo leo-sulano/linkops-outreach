@@ -156,6 +156,18 @@ export async function updateSingleContactInSheet(
   return true
 }
 
+// Clear the Data Collected column (H) for all rows so leads can be re-queued.
+export async function clearDataCollectedColumn(
+  spreadsheetId: string,
+  tab: string
+): Promise<void> {
+  const sheets = getSheetsClient()
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: `${tab}!H2:H`,
+  })
+}
+
 // Batch-update enrichment columns (D:F) for many contacts in one API call.
 export async function updateContactsInSheet(
   spreadsheetId: string,
