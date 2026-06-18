@@ -36,7 +36,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
   }
 }
 
-export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
+export default function LeadsOverviewPage({ stats: initialStats }: { stats: LeadStats }) {
   const [workerRunning, setWorkerRunning] = useState(false)
   const [workerCounts, setWorkerCounts] = useState({ processing: 0, pending: 0 })
   const [showWorkerModal, setShowWorkerModal] = useState(false)
@@ -47,6 +47,7 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([])
   const [leads, setLeads] = useState<NewLead[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [stats, setStats] = useState<LeadStats>(initialStats)
 
   const checkWorker = useCallback(async () => {
     try {
@@ -73,19 +74,30 @@ export default function LeadsOverviewPage({ stats }: { stats: LeadStats }) {
     } catch { /* ignore */ }
   }, [])
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/leads/contacts?view=stats', { headers: API_HEADERS })
+      const data = await res.json()
+      setStats(data)
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
     checkWorker()
     fetchActiveJobs()
     fetchLeads()
+    fetchStats()
     const workerInterval = setInterval(checkWorker, 5000)
     const jobsInterval = setInterval(fetchActiveJobs, 3000)
     const leadsInterval = setInterval(fetchLeads, 6000)
+    const statsInterval = setInterval(fetchStats, 10000)
     return () => {
       clearInterval(workerInterval)
       clearInterval(jobsInterval)
       clearInterval(leadsInterval)
+      clearInterval(statsInterval)
     }
-  }, [checkWorker, fetchActiveJobs, fetchLeads])
+  }, [checkWorker, fetchActiveJobs, fetchLeads, fetchStats])
 
   async function handleProcessLeads() {
     setIsProcessing(true)
