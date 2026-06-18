@@ -41,8 +41,8 @@ const DISCOVERY_KEYWORDS = [
 ]
 
 const MAX_DISCOVERED_PAGES = 3
-const PAGE_TIMEOUT_MS = 15_000
-const NAV_DELAY_MS = 800
+const PAGE_TIMEOUT_MS = 10_000
+const NAV_DELAY_MS = 400
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 // Injected before any page JS via Page.addScriptToEvaluateOnNewDocument.

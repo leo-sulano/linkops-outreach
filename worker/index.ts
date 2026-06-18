@@ -9,7 +9,7 @@ import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/
 import { extractLinkedInPerson } from '../lib/leads/enrichment'
 
 const POLL_INTERVAL_MS = 5_000
-const DOMAIN_DELAY_MS = 5_000
+const DOMAIN_DELAY_MS = 2_000
 const MAX_RETRIES = 3
 const CONCURRENCY = 1
 const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
