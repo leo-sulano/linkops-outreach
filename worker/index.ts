@@ -197,6 +197,19 @@ async function processJob(job: {
     const msg = err?.message ?? String(err)
     console.error(`[worker] ${job.domain} failed: ${msg}`)
 
+    const isDriverError = msg.toLowerCase().includes('unable to obtain browser driver')
+    if (isDriverError) {
+      // Infrastructure failure — ChromeDriver/Selenium Manager glitch. Don't count against the
+      // domain's retry budget and don't write anything to the sheet; just requeue and wait.
+      console.warn(`[worker] ${job.domain} → driver init failure, requeueing without retry penalty`)
+      await sb
+        .from('lead_jobs')
+        .update({ status: 'pending', started_at: null, error_log: msg })
+        .eq('id', job.id)
+        .eq('status', 'processing')
+      return
+    }
+
     const newRetry = job.retry_count + 1
     const isSiteUnreachable = msg.toLowerCase().includes('net::') || msg.toLowerCase().includes('err_name_not_resolved')
     const isLastRetry = newRetry >= MAX_RETRIES || isSiteUnreachable

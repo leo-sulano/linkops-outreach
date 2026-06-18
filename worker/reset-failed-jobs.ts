@@ -13,7 +13,6 @@ async function main() {
   const { data, error } = await sb
     .from('lead_jobs')
     .select('id, domain, error_log')
-    .eq('status', 'paused')
     .ilike('error_log', '%Unable to obtain browser driver%')
 
   if (error) {

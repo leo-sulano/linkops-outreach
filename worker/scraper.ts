@@ -215,10 +215,20 @@ export async function scrapeDomain(
     'profile.password_manager_enabled': false,
   })
 
-  const driver: WebDriver = await new Builder()
-    .forBrowser(Browser.CHROME)
-    .setChromeOptions(options)
-    .build()
+  let driver: WebDriver | null = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      driver = await new Builder()
+        .forBrowser(Browser.CHROME)
+        .setChromeOptions(options)
+        .build()
+      break
+    } catch (err: any) {
+      if (attempt === 3) throw err
+      await sleep(2_000 * attempt)
+    }
+  }
+  if (!driver) throw new Error('Failed to build WebDriver after 3 attempts')
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
 
@@ -340,7 +350,7 @@ export async function scrapeDomain(
       } catch { /* skip */ }
     }
   } finally {
-    await driver.quit()
+    await driver!.quit()
   }
 
   return {
