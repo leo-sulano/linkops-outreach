@@ -57,7 +57,7 @@ export async function aiResearch(
 ): Promise<Partial<AIExtractResult>> {
   const model = getClient().getGenerativeModel({
     model: 'gemini-2.0-flash',
-    tools: [{ googleSearch: {} }],
+    tools: [{ googleSearchRetrieval: {} }],
   })
 
   const result = await model.generateContent(buildPrompt(domain, scraped))
