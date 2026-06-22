@@ -86,7 +86,11 @@
       "PowerShell(Get-Process -Id 25408 -ErrorAction SilentlyContinue)",
       "PowerShell(pm2 list)",
       "PowerShell(pm2 restart lead-worker)",
-      "PowerShell(pm2 save)"
+      "PowerShell(pm2 save)",
+      "PowerShell(pm2 logs lead-worker --lines 30 --nostream)",
+      "PowerShell(pm2 logs lead-worker --lines 15 --nostream)",
+      "PowerShell(pm2 logs lead-worker --lines 10 --nostream)",
+      "PowerShell(pm2 logs lead-worker --lines 8 --nostream)"
     ]
   }
 }
