@@ -266,10 +266,12 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 async function sendHeartbeat() {
-  const sb = getSupabase()
-  await sb
-    .from('worker_heartbeat')
-    .upsert({ id: 'worker', last_seen_at: new Date().toISOString() }, { onConflict: 'id' })
+  try {
+    const sb = getSupabase()
+    await sb
+      .from('worker_heartbeat')
+      .upsert({ id: 'worker', last_seen_at: new Date().toISOString() }, { onConflict: 'id' })
+  } catch { /* non-critical — never let heartbeat crash the worker */ }
 }
 
 let loopIteration = 0
