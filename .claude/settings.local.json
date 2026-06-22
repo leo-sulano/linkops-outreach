@@ -90,7 +90,8 @@
       "PowerShell(pm2 logs lead-worker --lines 30 --nostream)",
       "PowerShell(pm2 logs lead-worker --lines 15 --nostream)",
       "PowerShell(pm2 logs lead-worker --lines 10 --nostream)",
-      "PowerShell(pm2 logs lead-worker --lines 8 --nostream)"
+      "PowerShell(pm2 logs lead-worker --lines 8 --nostream)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, CPU, @{N='CMD';E={\\(Get-WmiObject Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List)"
     ]
   }
 }
