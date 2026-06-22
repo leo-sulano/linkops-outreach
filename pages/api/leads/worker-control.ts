@@ -8,12 +8,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const sb = getSupabaseAdminClient()
 
   if (req.method === 'GET') {
-    const [{ count: processing }, { count: pending }, { count: paused }] = await Promise.all([
+    const [
+      { count: processing },
+      { count: pending },
+      { count: paused },
+      { data: hb },
+    ] = await Promise.all([
       sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
       sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'paused'),
+      sb.from('worker_heartbeat').select('last_seen_at').eq('id', 'worker').maybeSingle(),
     ])
+    const alive = hb != null && (Date.now() - new Date((hb as any).last_seen_at).getTime()) < 30_000
     return res.status(200).json({
+      alive,
       running: (processing ?? 0) > 0,
       paused: (paused ?? 0) > 0 && (pending ?? 0) === 0 && (processing ?? 0) === 0,
       processing: processing ?? 0,

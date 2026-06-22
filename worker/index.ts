@@ -265,6 +265,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ])
 }
 
+async function sendHeartbeat() {
+  const sb = getSupabase()
+  await sb
+    .from('worker_heartbeat')
+    .upsert({ id: 'worker', last_seen_at: new Date().toISOString() }, { onConflict: 'id' })
+}
+
 let loopIteration = 0
 
 async function pollLoop() {
@@ -272,6 +279,7 @@ async function pollLoop() {
   await resetStuckJobs()
   while (true) {
     loopIteration++
+    await sendHeartbeat()
     // Periodically rescue jobs left in processing by a previous run or a timeout
     if (loopIteration % 12 === 0) await resetStuckJobs()
 

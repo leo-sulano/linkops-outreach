@@ -37,6 +37,7 @@ export const getServerSideProps: GetServerSideProps = async () => {
 }
 
 export default function LeadsOverviewPage({ stats: initialStats }: { stats: LeadStats }) {
+  const [workerAlive, setWorkerAlive] = useState(false)
   const [workerRunning, setWorkerRunning] = useState(false)
   const [workerCounts, setWorkerCounts] = useState({ processing: 0, pending: 0 })
   const [showWorkerModal, setShowWorkerModal] = useState(false)
@@ -53,6 +54,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
     try {
       const res = await fetch('/api/leads/worker-control', { headers: API_HEADERS })
       const data = await res.json()
+      setWorkerAlive(data.alive ?? false)
       setWorkerRunning(data.running)
       setWorkerCounts({ processing: data.processing ?? 0, pending: data.pending ?? 0 })
     } catch { /* ignore */ }
@@ -199,9 +201,11 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
 
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-sm text-slate-400">
-            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : pendingCount > 0 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : workerAlive ? 'bg-green-400' : pendingCount > 0 ? 'bg-yellow-500' : 'bg-slate-600'}`} />
             {workerRunning
               ? `Scraping — ${processingCount} active, ${pendingCount} pending`
+              : workerAlive
+              ? pendingCount > 0 ? `Worker running — ${pendingCount} jobs queued` : 'Worker running — idle'
               : pendingCount > 0
               ? `Worker not running — ${pendingCount} jobs waiting`
               : 'Idle'}
@@ -281,9 +285,9 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
       {/* Live Monitor */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 px-4 py-3 rounded-lg bg-slate-900 border border-slate-700">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`w-2.5 h-2.5 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
+          <span className={`w-2.5 h-2.5 rounded-full ${workerRunning ? 'bg-green-400 animate-pulse' : workerAlive ? 'bg-green-400' : 'bg-slate-600'}`} />
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            {workerRunning ? 'Worker Active' : 'Worker Idle'}
+            {workerRunning ? 'Worker Active' : workerAlive ? 'Worker Running' : 'Worker Idle'}
           </span>
         </div>
 
