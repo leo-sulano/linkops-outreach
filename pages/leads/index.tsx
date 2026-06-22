@@ -193,6 +193,12 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
   const pendingCount = workerCounts.pending
   const processingCount = workerCounts.processing
 
+  // Merge live job status into lead cards so the processing animation fires immediately
+  const processingDomains = new Set(processingJobs.map((j) => j.domain))
+  const mergedLeads = leads.map((l) =>
+    processingDomains.has(l.domain) ? { ...l, status: 'processing' } : l
+  )
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
       {/* Header */}
@@ -350,7 +356,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
       {/* New leads */}
       <div className="mt-6">
         <NewLeadsTable
-          leads={leads}
+          leads={mergedLeads}
           isProcessing={isProcessing}
           onProcess={handleProcessLeads}
         />
