@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
 import { aiExtract, regexExtract, AIExtractResult } from './ai-extract'
+import { aiResearch } from './ai-research'
 import { updateSingleContactInSheet, markLeadDataCollected } from '../lib/leads/sheets-service'
 import { extractLinkedInPerson } from '../lib/leads/enrichment'
 
@@ -116,13 +117,25 @@ async function processJob(job: {
       extracted = regexExtract(html, text, contactText, links)
     }
 
-    const company_name = extracted.company_name
-    const company_email = extracted.company_email
-    const company_linkedin = extracted.company_linkedin
-    const company_type = extracted.company_type
-    let contact_name = extracted.contact_name
-    let contact_role = extracted.contact_role
-    let contact_linkedin = extracted.contact_linkedin
+    // Gemini research — validates and enriches extracted data via Google Search grounding.
+    // Only overwrites a field when 2+ independent external sources agree.
+    // Failures are silent: scraped data is used as-is.
+    let researched: Partial<AIExtractResult> = {}
+    try {
+      researched = await aiResearch(job.domain, extracted)
+      console.log(`[worker] ${job.domain} → Gemini research OK`)
+    } catch (err: any) {
+      console.warn(`[worker] ${job.domain} → Gemini research failed, using scraped data: ${err.message}`)
+    }
+    const merged: AIExtractResult = { ...extracted, ...researched } as AIExtractResult
+
+    const company_name = merged.company_name
+    const company_email = merged.company_email
+    const company_linkedin = merged.company_linkedin
+    const company_type = merged.company_type
+    let contact_name = merged.contact_name
+    let contact_role = merged.contact_role
+    let contact_linkedin = merged.contact_linkedin
 
     // LinkedIn scraping fallback: AI found a company page but no contact name
     if (company_linkedin && !contact_name) {
