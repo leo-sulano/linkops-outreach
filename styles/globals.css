@@ -13,3 +13,27 @@ body {
 * {
     @apply transition-colors duration-200;
 }
+
+@keyframes breathe {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.12);
+    }
+    50% {
+        transform: scale(1.018);
+        box-shadow: 0 0 22px 6px rgba(59, 130, 246, 0.30);
+    }
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.animate-breathe {
+    animation: breathe 2.4s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+    animation: spin-slow 2.8s linear infinite;
+}
