@@ -74,15 +74,21 @@ function LeadCard({ lead }: { lead: NewLead }) {
   const isActive = lead.status === 'processing'
 
   return (
-    <div className={`group bg-slate-900 border rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-default ${
-      isActive
-        ? 'border-blue-500/60 bg-slate-800/80 animate-breathe'
-        : 'border-slate-800 hover:border-slate-600 hover:bg-slate-800/60'
-    }`}>
+    <div
+      className={`group bg-slate-900 border rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-default ${
+        isActive
+          ? 'border-blue-500/60 bg-slate-800/80'
+          : 'border-slate-800 hover:border-slate-600 hover:bg-slate-800/60'
+      }`}
+      style={isActive ? { animation: 'breathe 2.4s ease-in-out infinite' } : {}}
+    >
       {/* Top row: globe icon + domain */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
-          <Globe className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400 animate-spin-slow' : 'text-slate-500 group-hover:text-slate-400'}`} />
+          <Globe
+            className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-400'}`}
+            style={isActive ? { animation: 'spin-slow 2.8s linear infinite' } : {}}
+          />
         </div>
         <p className="text-sm font-semibold text-slate-200 truncate whitespace-nowrap leading-snug">{host}</p>
       </div>
