@@ -51,6 +51,8 @@ function getClient(): GoogleGenerativeAI {
   return genAI
 }
 
+const GEMINI_TIMEOUT_MS = 20_000
+
 export async function aiResearch(
   domain: string,
   scraped: AIExtractResult
@@ -60,7 +62,12 @@ export async function aiResearch(
     tools: [{ googleSearchRetrieval: {} }],
   })
 
-  const result = await model.generateContent(buildPrompt(domain, scraped))
+  const result = await Promise.race([
+    model.generateContent(buildPrompt(domain, scraped)),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini research timed out')), GEMINI_TIMEOUT_MS)
+    ),
+  ])
   const text = result.response.text()
 
   let parsed: Record<string, unknown>
