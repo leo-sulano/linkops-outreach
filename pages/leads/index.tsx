@@ -304,12 +304,14 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
           {processingJobs.length > 0 ? (
             <div className="flex items-center gap-1.5 min-w-0">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 flex-shrink-0" />
-              <span className="text-sm font-mono text-indigo-300 truncate">{processingJobs[0].domain}</span>
-              {processingJobs[0].current_page && (
-                <span className="text-xs font-mono text-slate-500 flex-shrink-0 truncate">
-                  · {processingJobs[0].current_page}
-                </span>
-              )}
+              <a
+                href={processingJobs[0].current_page || `https://${processingJobs[0].domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-mono text-indigo-300 truncate hover:text-indigo-200 hover:underline"
+              >
+                {processingJobs[0].current_page || processingJobs[0].domain}
+              </a>
               {processingJobs.length > 1 && (
                 <span className="text-xs text-slate-500 flex-shrink-0">+{processingJobs.length - 1} more</span>
               )}

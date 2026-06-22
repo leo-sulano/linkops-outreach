@@ -76,13 +76,13 @@ function LeadCard({ lead }: { lead: NewLead }) {
   return (
     <div className={`group bg-slate-900 border rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200 cursor-default ${
       isActive
-        ? 'border-blue-500/60 bg-slate-800/80 animate-pulse shadow-[0_0_12px_2px_rgba(59,130,246,0.15)]'
+        ? 'border-blue-500/60 bg-slate-800/80 animate-breathe'
         : 'border-slate-800 hover:border-slate-600 hover:bg-slate-800/60'
     }`}>
       {/* Top row: globe icon + domain */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 shrink-0 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center group-hover:border-slate-600 transition-colors">
-          <Globe className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400 animate-spin' : 'text-slate-500 group-hover:text-slate-400'}`} />
+          <Globe className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-blue-400 animate-spin-slow' : 'text-slate-500 group-hover:text-slate-400'}`} />
         </div>
         <p className="text-sm font-semibold text-slate-200 truncate whitespace-nowrap leading-snug">{host}</p>
       </div>
