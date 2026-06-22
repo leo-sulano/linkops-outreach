@@ -199,11 +199,21 @@ async function processJob(job: {
     // Only flag needs_review when a name was found but looks like a paragraph (>50 chars)
     const nameIsTooLong = company_name !== null && company_name.length > 50
     const finalStatus = nameIsTooLong ? 'needs_review' : 'completed'
+    const completedAt = new Date().toISOString()
     await sb
       .from('lead_jobs')
-      .update({ status: finalStatus, completed_at: new Date().toISOString(), current_page: null })
+      .update({ status: finalStatus, completed_at: completedAt, current_page: null })
       .eq('id', job.id)
       .eq('status', 'processing') // no-op if job was stopped/reset mid-flight
+
+    // Deduplicate: kill any other pending/processing copies of the same domain
+    // so a stuck duplicate can't loop the worker back to this domain indefinitely.
+    await sb
+      .from('lead_jobs')
+      .update({ status: 'completed', completed_at: completedAt, current_page: null })
+      .eq('domain', job.domain)
+      .in('status', ['pending', 'processing'])
+      .neq('id', job.id)
 
     console.log(`[worker] ${job.domain} → ${finalStatus} | Data Collected: ${remark}`)
   } catch (err: any) {
@@ -243,16 +253,27 @@ async function processJob(job: {
     }
 
     const finalStatus = isLastRetry ? (isSiteUnreachable ? 'completed' : 'failed') : 'pending'
+    const failedAt = isLastRetry ? new Date().toISOString() : null
     await sb
       .from('lead_jobs')
       .update({
         status: finalStatus,
         retry_count: newRetry,
         error_log: msg,
-        ...(isLastRetry && { completed_at: new Date().toISOString(), current_page: null }),
+        ...(failedAt && { completed_at: failedAt, current_page: null }),
       })
       .eq('id', job.id)
       .eq('status', 'processing')
+
+    // Deduplicate: on final failure, kill any other copies so they don't re-enter the loop
+    if (isLastRetry) {
+      await sb
+        .from('lead_jobs')
+        .update({ status: finalStatus, completed_at: failedAt, current_page: null })
+        .eq('domain', job.domain)
+        .in('status', ['pending', 'processing'])
+        .neq('id', job.id)
+    }
   }
 }
 
