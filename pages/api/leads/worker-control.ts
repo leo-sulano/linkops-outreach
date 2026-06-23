@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireApiKey } from '@/lib/api-auth'
 import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
+import { getExistingContactDomains } from '@/lib/leads/repository'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireApiKey(req, res)) return
@@ -9,23 +10,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     const [
-      { count: processing },
-      { count: pending },
+      { data: affiliates },
+      existingContacts,
+      { data: activeJobs },
       { count: paused },
       { data: hb },
     ] = await Promise.all([
-      sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
-      sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      sb.from('leads').select('domain').eq('type', 'Affiliate'),
+      getExistingContactDomains(),
+      sb.from('lead_jobs').select('domain, status').in('status', ['pending', 'processing']),
       sb.from('lead_jobs').select('*', { count: 'exact', head: true }).eq('status', 'paused'),
       sb.from('worker_heartbeat').select('last_seen_at').eq('id', 'worker').maybeSingle(),
     ])
+
+    const qualifiedDomains = new Set(
+      (affiliates ?? []).map((a) => a.domain).filter((d) => !existingContacts.has(d))
+    )
+    const qualifiedJobs = (activeJobs ?? []).filter((j) => qualifiedDomains.has(j.domain))
+    const processing = qualifiedJobs.filter((j) => j.status === 'processing').length
+    const pending = qualifiedJobs.filter((j) => j.status === 'pending').length
+
     const alive = hb != null && (Date.now() - new Date((hb as any).last_seen_at).getTime()) < 30_000
     return res.status(200).json({
       alive,
-      running: (processing ?? 0) > 0,
-      paused: (paused ?? 0) > 0 && (pending ?? 0) === 0 && (processing ?? 0) === 0,
-      processing: processing ?? 0,
-      pending: pending ?? 0,
+      running: processing > 0,
+      paused: (paused ?? 0) > 0 && pending === 0 && processing === 0,
+      processing,
+      pending,
     })
   }
 
