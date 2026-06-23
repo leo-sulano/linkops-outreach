@@ -190,6 +190,7 @@ function hasEnoughData(
 export async function scrapeDomain(
   domain: string,
   onPageVisit?: (path: string) => Promise<void> | void,
+  signal?: AbortSignal,
 ): Promise<ScrapeResult & { captchaRequired?: boolean }> {
   const options = new Options()
   options.addArguments(
@@ -217,11 +218,17 @@ export async function scrapeDomain(
 
   let driver: WebDriver | null = null
   for (let attempt = 1; attempt <= 3; attempt++) {
+    if (signal?.aborted) throw new Error('Job timed out')
     try {
-      driver = await new Builder()
-        .forBrowser(Browser.CHROME)
-        .setChromeOptions(options)
-        .build()
+      driver = await Promise.race([
+        new Builder().forBrowser(Browser.CHROME).setChromeOptions(options).build(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('unable to obtain browser driver: build timed out after 30s')),
+            30_000
+          )
+        ),
+      ])
       break
     } catch (err: any) {
       if (attempt === 3) throw err
@@ -229,6 +236,9 @@ export async function scrapeDomain(
     }
   }
   if (!driver) throw new Error('Failed to build WebDriver after 3 attempts')
+
+  const abortHandler = () => { driver?.quit().catch(() => {}) }
+  signal?.addEventListener('abort', abortHandler, { once: true })
 
   await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
 
@@ -255,6 +265,7 @@ export async function scrapeDomain(
     let discoveredPaths: string[] = []
 
     const visitPage = async (url: string, isHomepage: boolean) => {
+      if (signal?.aborted) throw new Error('Job timed out')
       try {
         const path = isHomepage ? '/' : (new URL(url).pathname || '/')
         await onPageVisit?.(path)
@@ -336,7 +347,7 @@ export async function scrapeDomain(
 
     // --- Static subpages (skip homepage already done) ---
     for (const subpath of STATIC_SUBPAGES.slice(1)) {
-      if (hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
+      if (signal?.aborted || hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
       try {
         await visitPage(`${baseUrl}${subpath}`, false)
       } catch { /* page not found or timeout — skip */ }
@@ -344,14 +355,17 @@ export async function scrapeDomain(
 
     // --- Discovered pages ---
     for (const url of discoveredPaths) {
-      if (hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
+      if (signal?.aborted || hasEnoughData(homepageHtml, allText, contactPageText, allLinks)) break
       try {
         await visitPage(url, false)
       } catch { /* skip */ }
     }
   } finally {
-    await driver!.quit()
+    signal?.removeEventListener('abort', abortHandler)
+    await driver!.quit().catch(() => {})
   }
+
+  if (signal?.aborted) throw new Error('Job timed out')
 
   return {
     html: homepageHtml,
