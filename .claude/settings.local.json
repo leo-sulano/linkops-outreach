@@ -91,7 +91,10 @@
       "PowerShell(pm2 logs lead-worker --lines 15 --nostream)",
       "PowerShell(pm2 logs lead-worker --lines 10 --nostream)",
       "PowerShell(pm2 logs lead-worker --lines 8 --nostream)",
-      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, CPU, @{N='CMD';E={\\(Get-WmiObject Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List)"
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, CPU, @{N='CMD';E={\\(Get-WmiObject Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\"\\).CommandLine}} | Format-List)",
+      "Bash(dir /B *.ts *.tsx *.js *.jsx)",
+      "Bash(dir /B /S lib\\\\*.ts lib\\\\*.tsx pages\\\\*.ts pages\\\\*.tsx components\\\\*.tsx)",
+      "Bash(bash \"C:\\\\Users\\\\Leo\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\6.0.3\\\\skills\\\\subagent-driven-development\\\\scripts\\\\task-brief\" \"docs/superpowers/plans/2026-06-23-worker-stuck-fix.md\" 1)"
     ]
   }
 }
