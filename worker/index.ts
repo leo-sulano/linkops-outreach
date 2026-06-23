@@ -15,6 +15,8 @@ const MAX_RETRIES = 3
 const CONCURRENCY = 1
 const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
 const STUCK_JOB_THRESHOLD_MS = 10 * 60 * 1_000 // reset jobs processing > 10 min
+const WATCHDOG_MS = 30 * 60 * 1_000
+let lastJobTerminatedAt = Date.now()
 
 function getSupabase() {
   return createClient(
@@ -87,12 +89,16 @@ async function processJob(job: {
   const sb = getSupabase()
   console.log(`[worker] Processing ${job.domain} (attempt ${job.retry_count + 1})`)
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), JOB_TIMEOUT_MS)
+
   try {
     const { html, text, contactText, links, captchaRequired } = await scrapeDomain(
       job.domain,
       async (path) => {
         await sb.from('lead_jobs').update({ current_page: path }).eq('id', job.id)
       },
+      controller.signal,
     )
 
     if (captchaRequired) {
@@ -217,17 +223,42 @@ async function processJob(job: {
 
     console.log(`[worker] ${job.domain} → ${finalStatus} | Data Collected: ${remark}`)
   } catch (err: any) {
+    if (controller.signal.aborted) {
+      const msg = `Job timed out after ${JOB_TIMEOUT_MS / 1000}s: ${job.domain}`
+      console.error(`[worker] ${job.domain} timed out`)
+      const newRetry = job.retry_count + 1
+      const isLastRetry = newRetry >= MAX_RETRIES
+      await sb
+        .from('lead_jobs')
+        .update({
+          status: isLastRetry ? 'failed' : 'pending',
+          retry_count: newRetry,
+          error_log: msg,
+          started_at: null,
+        })
+        .eq('id', job.id)
+        .eq('status', 'processing')
+      return
+    }
+
     const msg = err?.message ?? String(err)
     console.error(`[worker] ${job.domain} failed: ${msg}`)
 
     const isDriverError = msg.toLowerCase().includes('unable to obtain browser driver')
     if (isDriverError) {
-      // Infrastructure failure — ChromeDriver/Selenium Manager glitch. Don't count against the
-      // domain's retry budget and don't write anything to the sheet; just requeue and wait.
-      console.warn(`[worker] ${job.domain} → driver init failure, requeueing without retry penalty`)
+      // Infrastructure failure — ChromeDriver/Selenium Manager glitch.
+      // Still count against retry budget to prevent infinite loops when Chrome keeps failing.
+      const newRetryDriver = job.retry_count + 1
+      const isLastDriverRetry = newRetryDriver >= MAX_RETRIES
+      console.warn(`[worker] ${job.domain} → driver init failure (${newRetryDriver}/${MAX_RETRIES}), ${isLastDriverRetry ? 'marking failed' : 'requeueing'}`)
       await sb
         .from('lead_jobs')
-        .update({ status: 'pending', started_at: null, error_log: msg })
+        .update({
+          status: isLastDriverRetry ? 'failed' : 'pending',
+          started_at: null,
+          error_log: msg,
+          retry_count: newRetryDriver,
+        })
         .eq('id', job.id)
         .eq('status', 'processing')
       return
@@ -274,16 +305,10 @@ async function processJob(job: {
         .in('status', ['pending', 'processing'])
         .neq('id', job.id)
     }
+  } finally {
+    clearTimeout(timeoutId)
+    lastJobTerminatedAt = Date.now()
   }
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Job timed out after ${ms / 1000}s: ${label}`)), ms)
-    ),
-  ])
 }
 
 async function sendHeartbeat() {
@@ -310,27 +335,25 @@ async function pollLoop() {
     if (jobs.length > 0) {
       await Promise.all(
         jobs.map((job) =>
-          withTimeout(processJob(job), JOB_TIMEOUT_MS, job.domain).catch(async (err) => {
-            const msg = err?.message ?? String(err)
-            console.error(`[worker] ${job.domain} timed out: ${msg}`)
-            const sb = getSupabase()
-            const newRetry = job.retry_count + 1
-            const isLastRetry = newRetry >= MAX_RETRIES
-            await sb
-              .from('lead_jobs')
-              .update({
-                status: isLastRetry ? 'failed' : 'pending',
-                retry_count: newRetry,
-                error_log: msg,
-                started_at: null,
-              })
-              .eq('id', job.id)
-              .eq('status', 'processing')
+          processJob(job).catch((err) => {
+            console.error(`[worker] ${job.domain} unhandled error: ${err?.message ?? err}`)
           })
         )
       )
       await sleep(DOMAIN_DELAY_MS)
     } else {
+      if (Date.now() - lastJobTerminatedAt > WATCHDOG_MS) {
+        const sbWd = getSupabase()
+        const { count } = await sbWd
+          .from('lead_jobs')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'processing')
+        if ((count ?? 0) > 0) {
+          console.error('[worker] No job terminated in 30 min with active processing job — exiting for PM2 restart')
+          process.exit(1)
+        }
+        lastJobTerminatedAt = Date.now()  // truly idle — reset so we don't query DB every poll
+      }
       await sleep(POLL_INTERVAL_MS)
     }
   }
