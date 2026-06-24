@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "worker:start": "pm2 start worker/ecosystem.config.js && pm2 save",
+    "worker:stop": "pm2 stop lead-worker",
+    "worker:restart": "pm2 reload lead-worker && pm2 save",
+    "worker:logs": "pm2 logs lead-worker"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",

@@ -81,6 +81,28 @@ async function claimPendingJobs(count: number) {
   return claimed.filter(Boolean) as typeof data
 }
 
+async function upsertNullContact(domain: string) {
+  const sb = getSupabase()
+  const { data: lead } = await sb.from('leads').select('vertical').eq('domain', domain).single()
+  await sb.from('lead_contacts').upsert(
+    {
+      domain,
+      vertical: lead?.vertical ?? null,
+      company_type: null,
+      company_name: null,
+      company_email: null,
+      company_linkedin: null,
+      contact_name: null,
+      contact_role: null,
+      contact_linkedin: null,
+      new_lead: true,
+      emailed: false,
+      contacted: false,
+    },
+    { onConflict: 'domain', ignoreDuplicates: true }
+  )
+}
+
 async function processJob(job: {
   id: string
   domain: string
@@ -114,6 +136,7 @@ async function processJob(job: {
     }
 
     // AI extraction — regex fallback fires silently if AI call fails
+    await sb.from('lead_jobs').update({ current_page: '[ai-extract]' }).eq('id', job.id)
     let extracted: AIExtractResult
     try {
       extracted = await aiExtract(html, text, contactText, links)
@@ -126,12 +149,25 @@ async function processJob(job: {
     // Gemini research — validates and enriches extracted data via Google Search grounding.
     // Only overwrites a field when 2+ independent external sources agree.
     // Failures are silent: scraped data is used as-is.
+    // Skip if scraping already populated all 6 enrichable fields — saves 3-20s per domain.
+    const researchNeeded =
+      !extracted.company_name ||
+      !extracted.company_email ||
+      !extracted.contact_name ||
+      !extracted.contact_role ||
+      !extracted.company_linkedin ||
+      !extracted.contact_linkedin
     let researched: Partial<AIExtractResult> = {}
-    try {
-      researched = await aiResearch(job.domain, extracted)
-      console.log(`[worker] ${job.domain} → Gemini research OK`)
-    } catch (err: any) {
-      console.warn(`[worker] ${job.domain} → Gemini research failed, using scraped data: ${err.message}`)
+    if (researchNeeded) {
+      await sb.from('lead_jobs').update({ current_page: '[gemini-research]' }).eq('id', job.id)
+      try {
+        researched = await aiResearch(job.domain, extracted)
+        console.log(`[worker] ${job.domain} → Gemini research OK`)
+      } catch (err: any) {
+        console.warn(`[worker] ${job.domain} → Gemini research failed, using scraped data: ${err.message}`)
+      }
+    } else {
+      console.log(`[worker] ${job.domain} → Gemini research skipped (all fields populated)`)
     }
     // Gemini fills only fields that scraping left null — never overwrites a scraped value
     const merged: AIExtractResult = {
@@ -154,7 +190,8 @@ async function processJob(job: {
 
     // LinkedIn scraping fallback: AI found a company page but no contact name
     if (company_linkedin && !contact_name) {
-      const li = await discoverLinkedInContact(company_linkedin)
+      await sb.from('lead_jobs').update({ current_page: '[linkedin]' }).eq('id', job.id)
+      const li = await discoverLinkedInContact(company_linkedin, controller.signal)
       contact_name = li.contact_name
       contact_role = li.contact_role
       contact_linkedin = li.contact_linkedin ?? extracted.contact_linkedin
@@ -221,7 +258,7 @@ async function processJob(job: {
       .from('lead_jobs')
       .update({ status: finalStatus, completed_at: completedAt, current_page: null })
       .eq('id', job.id)
-      .eq('status', 'processing') // no-op if job was stopped/reset mid-flight
+      .in('status', ['processing', 'paused', 'pending']) // complete even if Stop/Start changed status mid-flight
 
     // Deduplicate: kill any other pending/processing copies of the same domain
     // so a stuck duplicate can't loop the worker back to this domain indefinitely.
@@ -239,6 +276,17 @@ async function processJob(job: {
       console.error(`[worker] ${job.domain} timed out`)
       const newRetry = job.retry_count + 1
       const isLastRetry = newRetry >= MAX_RETRIES
+      if (isLastRetry) {
+        await upsertNullContact(job.domain).catch(() => {})
+        try {
+          await markLeadDataCollected(
+            process.env.GOOGLE_SHEET_ID!,
+            process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
+            job.domain,
+            'Site timeout'
+          )
+        } catch { /* don't block job update */ }
+      }
       await sb
         .from('lead_jobs')
         .update({
@@ -262,6 +310,17 @@ async function processJob(job: {
       const newRetryDriver = job.retry_count + 1
       const isLastDriverRetry = newRetryDriver >= MAX_RETRIES
       console.warn(`[worker] ${job.domain} → driver init failure (${newRetryDriver}/${MAX_RETRIES}), ${isLastDriverRetry ? 'marking failed' : 'requeueing'}`)
+      if (isLastDriverRetry) {
+        await upsertNullContact(job.domain).catch(() => {})
+        try {
+          await markLeadDataCollected(
+            process.env.GOOGLE_SHEET_ID!,
+            process.env.GOOGLE_LEADS_SHEET_TAB || 'Leads',
+            job.domain,
+            'Site timeout'
+          )
+        } catch { /* don't block job update */ }
+      }
       await sb
         .from('lead_jobs')
         .update({
@@ -279,8 +338,9 @@ async function processJob(job: {
     const isSiteUnreachable = msg.toLowerCase().includes('net::') || msg.toLowerCase().includes('err_name_not_resolved')
     const isLastRetry = newRetry >= MAX_RETRIES || isSiteUnreachable
 
-    // On final retry failure, write the reason to Data Collected column
+    // On final retry failure, insert null contact row and write reason to Data Collected column
     if (isLastRetry) {
+      await upsertNullContact(job.domain).catch(() => {})
       const reason = isSiteUnreachable ? 'No data found'
         : msg.toLowerCase().includes('timeout') ? 'Site timeout'
         : `Error: ${msg.slice(0, 60)}`
@@ -335,42 +395,48 @@ let loopIteration = 0
 
 async function pollLoop() {
   console.log(`[worker] Starting poll loop (concurrency: ${CONCURRENCY})...`)
-  await resetStuckJobs()
-  while (true) {
-    loopIteration++
-    await sendHeartbeat()
-    // Periodically rescue jobs left in processing by a previous run or a timeout
-    if (loopIteration % 12 === 0) await resetStuckJobs()
+  try { await resetStuckJobs() } catch { /* non-fatal on startup */ }
 
-    const jobs = await claimPendingJobs(CONCURRENCY)
-    if (jobs.length > 0) {
-      await Promise.all(
-        jobs.map((job) =>
-          processJob(job).catch((err) => {
-            console.error(`[worker] ${job.domain} unhandled error: ${err?.message ?? err}`)
-          })
+  while (true) {
+    try {
+      loopIteration++
+      await sendHeartbeat()
+      // Periodically rescue jobs left in processing by a previous run or a timeout
+      if (loopIteration % 12 === 0) await resetStuckJobs()
+
+      const jobs = await claimPendingJobs(CONCURRENCY)
+      if (jobs.length > 0) {
+        await Promise.all(
+          jobs.map((job) =>
+            processJob(job).catch((err) => {
+              console.error(`[worker] ${job.domain} unhandled error: ${err?.message ?? err}`)
+            })
+          )
         )
-      )
-      await sleep(DOMAIN_DELAY_MS)
-    } else {
-      if (Date.now() - lastJobTerminatedAt > WATCHDOG_MS) {
-        const sbWd = getSupabase()
-        const { count } = await sbWd
-          .from('lead_jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'processing')
-        if ((count ?? 0) > 0) {
-          console.error('[worker] No job terminated in 30 min with active processing job — exiting for PM2 restart')
-          process.exit(1)
+        await sleep(DOMAIN_DELAY_MS)
+      } else {
+        if (Date.now() - lastJobTerminatedAt > WATCHDOG_MS) {
+          const sbWd = getSupabase()
+          const { count } = await sbWd
+            .from('lead_jobs')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'processing')
+          if ((count ?? 0) > 0) {
+            console.error('[worker] No job terminated in 30 min with active processing job — exiting for PM2 restart')
+            process.exit(1)
+          }
+          lastJobTerminatedAt = Date.now()
         }
-        lastJobTerminatedAt = Date.now()  // truly idle — reset so we don't query DB every poll
+        await sleep(POLL_INTERVAL_MS)
       }
-      await sleep(POLL_INTERVAL_MS)
+    } catch (err: any) {
+      console.error(`[worker] Poll loop error — retrying in 30s: ${err?.message ?? err}`)
+      await sleep(30_000)
     }
   }
 }
 
 pollLoop().catch((err) => {
-  console.error('[worker] Fatal:', err)
+  console.error('[worker] Fatal poll loop failure:', err)
   process.exit(1)
 })

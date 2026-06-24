@@ -221,7 +221,6 @@ export async function scrapeDomain(
     '--disable-plugins',
     '--js-flags=--max-old-space-size=256',
     '--memory-pressure-off',
-    '--single-process',
   )
   options.excludeSwitches('enable-automation', 'enable-logging')
   options.setUserPreferences({

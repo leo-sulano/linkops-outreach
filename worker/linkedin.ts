@@ -16,7 +16,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function discoverLinkedInContact(
-  linkedInUrl: string
+  linkedInUrl: string,
+  signal?: AbortSignal,
 ): Promise<LinkedInContact> {
   const empty: LinkedInContact = {
     contact_name: null,
@@ -24,7 +25,12 @@ export async function discoverLinkedInContact(
     contact_linkedin: null,
   }
 
+  if (signal?.aborted) return empty
+
   let driver: WebDriver | null = null
+  const abortHandler = () => { driver?.quit().catch(() => {}) }
+  signal?.addEventListener('abort', abortHandler, { once: true })
+
   try {
     const options = new Options()
     options.addArguments(
@@ -101,6 +107,7 @@ export async function discoverLinkedInContact(
   } catch {
     return empty
   } finally {
+    signal?.removeEventListener('abort', abortHandler)
     try {
       await driver?.quit()
     } catch {
