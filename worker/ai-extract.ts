@@ -122,12 +122,12 @@ export async function aiExtract(
   }
 
   if (contactText.trim()) {
-    sections.push(`=== CONTACT/ABOUT PAGES ===\n${truncate(contactText, 3000)}`)
+    sections.push(`=== CONTACT/ABOUT PAGES ===\n${truncate(contactText, 6000)}`)
   }
 
   const mainText = (contactText.length > 0 ? text.replace(contactText, '') : text).trim()
   if (mainText) {
-    sections.push(`=== MAIN SITE TEXT ===\n${truncate(mainText, 2000)}`)
+    sections.push(`=== MAIN SITE TEXT ===\n${truncate(mainText, 4000)}`)
   }
 
   const li = linkedInLinks(links)

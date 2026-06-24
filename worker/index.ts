@@ -133,7 +133,16 @@ async function processJob(job: {
     } catch (err: any) {
       console.warn(`[worker] ${job.domain} → Gemini research failed, using scraped data: ${err.message}`)
     }
-    const merged: AIExtractResult = { ...extracted, ...researched } as AIExtractResult
+    // Gemini fills only fields that scraping left null — never overwrites a scraped value
+    const merged: AIExtractResult = {
+      ...extracted,
+      company_name:      researched.company_name      ?? extracted.company_name,
+      company_email:     researched.company_email     ?? extracted.company_email,
+      contact_name:      researched.contact_name      ?? extracted.contact_name,
+      contact_role:      researched.contact_role      ?? extracted.contact_role,
+      company_linkedin:  researched.company_linkedin  ?? extracted.company_linkedin,
+      contact_linkedin:  researched.contact_linkedin  ?? extracted.contact_linkedin,
+    } as AIExtractResult
 
     const company_name = merged.company_name
     const company_email = merged.company_email
@@ -202,9 +211,11 @@ async function processJob(job: {
       remark
     )
 
-    // Only flag needs_review when a name was found but looks like a paragraph (>50 chars)
+    // Flag needs_review when the name is too long (paragraph) or is a generic UI string
     const nameIsTooLong = company_name !== null && company_name.length > 50
-    const finalStatus = nameIsTooLong ? 'needs_review' : 'completed'
+    const UI_STRINGS = /^(?:home|page\s*not\s*found|4\d{2}|error|all\s+rights\s+reserved|copyright|privacy\s*policy|terms(?:\s+(?:of\s+)?(?:service|use))?|contact\s*us|about\s*us|our\s+team|meet\s+the\s+team|welcome\s+to|loading|undefined|null|n\/?a)\s*$/i
+    const nameIsUIString = company_name !== null && UI_STRINGS.test(company_name.trim())
+    const finalStatus = (nameIsTooLong || nameIsUIString) ? 'needs_review' : 'completed'
     const completedAt = new Date().toISOString()
     await sb
       .from('lead_jobs')

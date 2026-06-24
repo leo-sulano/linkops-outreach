@@ -168,8 +168,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// Exit early when we have email + company name + at least one of (LinkedIn or contact name).
-// Pages are visited in priority order so this fires as soon as the data is complete.
+// Generic/CS prefixes that are low-value — don't exit early if this is the best email found
+const GENERIC_EMAIL_PREFIXES = [
+  'info@', 'contact@', 'support@', 'hello@', 'admin@', 'team@',
+  'enquiries@', 'enquiry@', 'webmaster@', 'noreply@', 'no-reply@',
+  'help@', 'service@', 'feedback@',
+]
+
+function isGenericEmail(email: string): boolean {
+  const lower = email.toLowerCase()
+  return GENERIC_EMAIL_PREFIXES.some((p) => lower.startsWith(p))
+}
+
+// Exit early when we have a good-quality email + company name + at least one of (LinkedIn or contact name).
+// Generic emails (info@, contact@, etc.) don't qualify — keep visiting pages for a better one.
 function hasEnoughData(
   html: string,
   textChunks: string[],
@@ -180,8 +192,9 @@ function hasEnoughData(
   const contactText = contactTextChunks.join('\n\n')
   const linkArr = Array.from(links)
   const email = extractMailtoEmail(html) ?? extractEmail(text, contactText)
+  if (!email || isGenericEmail(email)) return false
   const name = extractCompanyName(text, html)
-  if (!email || !name) return false
+  if (!name) return false
   const linkedin = extractLinkedInCompany(linkArr) ?? extractLinkedInPerson(linkArr)
   const contactName = extractContactFromSiteText(contactText).name
   return !!(linkedin || contactName)

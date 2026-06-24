@@ -302,6 +302,25 @@ const EXEC_TITLE_RE =
 // 2–3 consecutive title-case words — common person name shape
 const PERSON_NAME_RE = /\b([A-Z][a-z]{1,20}(?:\s+[A-Z][a-z]{1,20}){1,2})\b/
 
+// Words that appear in UI labels and company/page headings but never in real person names
+const NAME_BLOCKLIST_WORDS = new Set([
+  'Contact', 'About', 'Privacy', 'Terms', 'Policy', 'Cookie', 'Notice',
+  'Service', 'Services', 'Agreement', 'Rights', 'Reserved', 'Copyright',
+  'Team', 'Meet', 'More', 'Here', 'Sign', 'Login', 'Register', 'Subscribe',
+  'Management', 'Solutions', 'Group', 'Media', 'Digital', 'Technologies',
+  'Marketing', 'Network', 'Agency', 'Platform', 'Studio', 'Global',
+  'International', 'Limited', 'Inc', 'Ltd', 'Corp', 'LLC',
+])
+
+// Returns false for UI phrases, company-sounding strings, and other non-name matches
+function looksLikePersonName(candidate: string): boolean {
+  const words = candidate.trim().split(/\s+/)
+  if (words.some((w) => NAME_BLOCKLIST_WORDS.has(w))) return false
+  // Reject if any word is all-caps (acronym / abbreviation, not a name)
+  if (words.some((w) => w.length > 2 && w === w.toUpperCase())) return false
+  return true
+}
+
 export function extractContactFromSiteText(text: string): { name: string | null; role: string | null } {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
 
@@ -314,14 +333,14 @@ export function extractContactFromSiteText(text: string): { name: string | null;
     // Same line: "John Smith, CEO" / "CEO – John Smith" / "John Smith | Founder"
     const withoutTitle = line.replace(EXEC_TITLE_RE, '').replace(/[,|–—\-:]\s*/g, ' ').trim()
     const nameOnLine = withoutTitle.match(PERSON_NAME_RE)
-    if (nameOnLine) return { name: nameOnLine[1], role }
+    if (nameOnLine && looksLikePersonName(nameOnLine[1])) return { name: nameOnLine[1], role }
 
     // Adjacent line: name is the line directly above or below the title line
     for (const j of [i - 1, i + 1]) {
       const adj = lines[j]
       if (!adj || EXEC_TITLE_RE.test(adj)) continue
       const nameAdj = adj.match(PERSON_NAME_RE)
-      if (nameAdj) return { name: nameAdj[1], role }
+      if (nameAdj && looksLikePersonName(nameAdj[1])) return { name: nameAdj[1], role }
     }
   }
 

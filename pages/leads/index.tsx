@@ -132,7 +132,20 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
         body: JSON.stringify({ action: 'start' }),
       })
       const data = await res.json()
-      setMessage(data.resumed > 0 ? `Scraping resumed — ${data.resumed} jobs unpaused.` : 'Scraping active.')
+      if (data.resumed > 0) {
+        setMessage(`Scraping resumed — ${data.resumed} jobs unpaused.`)
+      } else {
+        // No paused jobs were flipped — jobs are already pending (or none exist)
+        const currentPending = workerCounts.pending
+        const currentAlive = workerAlive
+        if (!currentAlive) {
+          setMessage(`⚠ Worker is not running. Start it first: open a terminal in worker/ and run "node start.js"`)
+        } else if (currentPending > 0) {
+          setMessage(`Worker is running — ${currentPending} jobs pending. Scraping will begin shortly.`)
+        } else {
+          setMessage('Worker is running but no jobs are queued. Click "Process New Leads" to queue domains.')
+        }
+      }
       fetchActiveJobs()
       await checkWorker()
     } catch {
