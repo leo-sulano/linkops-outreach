@@ -201,6 +201,34 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
     }
   }
 
+  async function startSelected(domains: string[]) {
+    setMessage(null)
+    try {
+      const res = await fetch('/api/leads/start-selected', {
+        method: 'POST',
+        headers: API_HEADERS,
+        body: JSON.stringify({ domains }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setMessage(`Failed to start selected domains: ${data.error ?? res.statusText}`)
+        return
+      }
+      const parts: string[] = []
+      if (data.queued > 0) parts.push(`${data.queued} queued`)
+      if (data.resumed > 0) parts.push(`${data.resumed} resumed`)
+      setMessage(
+        parts.length > 0
+          ? `✓ ${parts.join(', ')}.`
+          : 'Selected domains are already queued or running.'
+      )
+      fetchActiveJobs()
+      fetchLeads()
+    } catch {
+      setMessage('Failed to start selected domains.')
+    }
+  }
+
   const pendingJobs = activeJobs.filter((j) => j.status === 'pending')
   const processingJobs = activeJobs.filter((j) => j.status === 'processing')
   const pendingCount = workerCounts.pending
@@ -374,6 +402,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
           leads={mergedLeads}
           isProcessing={isProcessing}
           onProcess={handleProcessLeads}
+          onStartSelected={startSelected}
         />
       </div>
     </div>
