@@ -251,11 +251,13 @@ export async function runChallenges(
 ): Promise<{ captchaRequired: boolean }> {
   await dismissCookieBanners(driver)
 
+  // Hard IP block — waiting or solving never helps, fail immediately.
+  // Checked before detectCaptcha because block pages often lack any JS-challenge
+  // phrase or widget, which would otherwise make detectCaptcha's fast path skip past it.
+  if (await isHardBlocked(driver)) return { captchaRequired: true }
+
   // Fast path: no captcha at all
   if (!(await detectCaptcha(driver))) return { captchaRequired: false }
-
-  // Hard IP block — waiting or solving never helps, fail immediately
-  if (await isHardBlocked(driver)) return { captchaRequired: true }
 
   // CF JS-only challenge (no widget/sitekey) — auto-resolves in a few seconds, just wait
   const hasWidget = await driver.executeScript<boolean>(
