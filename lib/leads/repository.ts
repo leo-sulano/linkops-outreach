@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { getSupabaseAdminClient } from '@/lib/integrations/supabase'
 
 export interface Lead {
@@ -244,4 +245,39 @@ export async function getNewLeads(): Promise<
     vertical: a.vertical,
     status: jobMap.get(a.domain) ?? 'unprocessed',
   }))
+}
+
+const RESUMABLE_STATUSES = new Set(['paused', 'failed', 'needs_review'])
+
+// Resumes already-queued (paused/failed/needs_review) domains and queues brand-new
+// ones as pending. Domains already pending/processing are left untouched.
+export async function startSelectedDomains(
+  domains: string[]
+): Promise<{ resumed: number; queued: number }> {
+  const sb = getSupabaseAdminClient()
+
+  const { data: existingJobs, error: fetchErr } = await sb
+    .from('lead_jobs')
+    .select('domain, status')
+    .in('domain', domains)
+  if (fetchErr) throw new Error(`startSelectedDomains fetch: ${fetchErr.message}`)
+
+  const jobStatusMap = new Map((existingJobs ?? []).map((j: any) => [j.domain, j.status]))
+
+  const toResume = domains.filter((d) => RESUMABLE_STATUSES.has(jobStatusMap.get(d) ?? ''))
+  const toQueue = domains.filter((d) => !jobStatusMap.has(d))
+
+  if (toResume.length > 0) {
+    const { error: resumeErr } = await sb
+      .from('lead_jobs')
+      .update({ status: 'pending', started_at: null })
+      .in('domain', toResume)
+    if (resumeErr) throw new Error(`startSelectedDomains resume: ${resumeErr.message}`)
+  }
+
+  if (toQueue.length > 0) {
+    await insertPendingJobs(randomUUID(), toQueue, 'pending')
+  }
+
+  return { resumed: toResume.length, queued: toQueue.length }
 }
