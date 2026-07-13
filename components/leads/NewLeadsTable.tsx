@@ -138,7 +138,7 @@ export function NewLeadsTable({
   leads: NewLead[]
   isProcessing: boolean
   onProcess: () => void
-  onStartSelected: (domains: string[]) => Promise<void>
+  onStartSelected: (domains: string[]) => Promise<boolean>
 }) {
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -178,8 +178,8 @@ export function NewLeadsTable({
   async function handleStartSelected() {
     setIsStarting(true)
     try {
-      await onStartSelected(Array.from(selected))
-      setSelected(new Set())
+      const success = await onStartSelected(Array.from(selected))
+      if (success) setSelected(new Set())
     } finally {
       setIsStarting(false)
     }

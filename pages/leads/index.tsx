@@ -201,7 +201,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
     }
   }
 
-  async function startSelected(domains: string[]) {
+  async function startSelected(domains: string[]): Promise<boolean> {
     setMessage(null)
     try {
       const res = await fetch('/api/leads/start-selected', {
@@ -212,7 +212,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
       const data = await res.json()
       if (!res.ok) {
         setMessage(`Failed to start selected domains: ${data.error ?? res.statusText}`)
-        return
+        return false
       }
       const parts: string[] = []
       if (data.queued > 0) parts.push(`${data.queued} queued`)
@@ -224,8 +224,10 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
       )
       fetchActiveJobs()
       fetchLeads()
+      return true
     } catch {
       setMessage('Failed to start selected domains.')
+      return false
     }
   }
 
