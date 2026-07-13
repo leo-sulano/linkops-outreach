@@ -36,7 +36,10 @@
       "Bash(node node_modules/typescript/bin/tsc --noEmit)",
       "Bash(where.exe chromedriver *)",
       "Bash(where.exe chrome *)",
-      "Bash(Remove-Item \"c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/worker/reset-stuck.ts\")"
+      "Bash(Remove-Item \"c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/worker/reset-stuck.ts\")",
+      "Bash(curl -s -X GET __TRACKED_VAR__/rest/v1/lead_jobs?select=id -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Prefer: count=exact' -I)",
+      "Bash(curl -s -X GET __TRACKED_VAR__/rest/v1/lead_contacts?select=domain,company_name,company_email,company_linkedin,contact_name,contact_role,contact_linkedin,new_lead,emailed,contacted -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(curl -s -X GET '__TRACKED_VAR__/rest/v1/lead_jobs?status=eq.failed&select=domain,error_log,retry_count' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
