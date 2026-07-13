@@ -3,6 +3,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 
 let mockExistingJobsData: { domain: string; status: string }[] = []
 const mockUpdateIn = jest.fn().mockResolvedValue({ error: null })
+const mockUpdate = jest.fn(() => ({ in: mockUpdateIn }))
 const mockInsert = jest.fn().mockResolvedValue({ error: null })
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -13,9 +14,7 @@ jest.mock('@supabase/supabase-js', () => ({
           Promise.resolve({ data: mockExistingJobsData, error: null })
         ),
       })),
-      update: jest.fn(() => ({
-        in: mockUpdateIn,
-      })),
+      update: mockUpdate,
       insert: mockInsert,
     })),
   })),
@@ -26,6 +25,7 @@ import { startSelectedDomains } from '@/lib/leads/repository'
 describe('startSelectedDomains', () => {
   beforeEach(() => {
     mockExistingJobsData = []
+    mockUpdate.mockClear()
     mockUpdateIn.mockClear()
     mockInsert.mockClear()
   })
@@ -57,6 +57,13 @@ describe('startSelectedDomains', () => {
       'processing.com',
     ])
     expect(result).toEqual({ resumed: 3, queued: 0 })
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'pending',
+      retry_count: 0,
+      error_log: null,
+      started_at: null,
+      completed_at: null,
+    })
     expect(mockUpdateIn).toHaveBeenCalledWith('domain', ['paused.com', 'failed.com', 'review.com'])
     expect(mockInsert).not.toHaveBeenCalled()
   })

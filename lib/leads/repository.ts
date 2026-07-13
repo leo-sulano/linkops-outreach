@@ -270,7 +270,7 @@ export async function startSelectedDomains(
   if (toResume.length > 0) {
     const { error: resumeErr } = await sb
       .from('lead_jobs')
-      .update({ status: 'pending', started_at: null })
+      .update({ status: 'pending', retry_count: 0, error_log: null, started_at: null, completed_at: null })
       .in('domain', toResume)
     if (resumeErr) throw new Error(`startSelectedDomains resume: ${resumeErr.message}`)
   }
