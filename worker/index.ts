@@ -35,16 +35,51 @@ async function resetStuckJobs() {
   const cutoff = new Date(Date.now() - STUCK_JOB_THRESHOLD_MS).toISOString()
   const { data } = await sb
     .from('lead_jobs')
-    .select('id')
+    .select('id, domain, retry_count')
     .eq('status', 'processing')
     .lt('started_at', cutoff)
   if (!data || data.length === 0) return
-  const ids = data.map((r) => r.id)
-  await sb
+
+  let resetCount = 0, failedCount = 0
+  for (const job of data) {
+    const newRetry = job.retry_count + 1
+    const exhausted = newRetry >= MAX_RETRIES
+    await sb.from('lead_jobs').update({
+      status: exhausted ? 'failed' : 'pending',
+      retry_count: newRetry,
+      started_at: null,
+      ...(exhausted ? { error_log: 'Stuck in processing — retry budget exhausted by watchdog' } : {}),
+    }).eq('id', job.id)
+    if (exhausted) {
+      failedCount++
+      await upsertNullContact(job.domain).catch(() => {})
+    } else {
+      resetCount++
+    }
+  }
+  if (resetCount > 0) console.log(`[worker] Reset ${resetCount} stuck processing jobs → pending`)
+  if (failedCount > 0) console.log(`[worker] Failed ${failedCount} exhausted stuck jobs`)
+}
+
+// At startup, fail any pending jobs whose retry budget is already exhausted.
+// These accumulate when resetStuckJobs cycles a job back to 'pending' and it
+// can't be claimed (claimPendingJobs filters retry_count >= MAX_RETRIES).
+async function failExhaustedPendingJobs() {
+  const sb = getSupabase()
+  const { data } = await sb
     .from('lead_jobs')
-    .update({ status: 'pending', started_at: null })
-    .in('id', ids)
-  console.log(`[worker] Reset ${ids.length} stuck processing jobs → pending`)
+    .select('id, domain')
+    .eq('status', 'pending')
+    .gte('retry_count', MAX_RETRIES)
+  if (!data || data.length === 0) return
+  for (const job of data) {
+    await sb.from('lead_jobs').update({
+      status: 'failed',
+      error_log: 'Pending with exhausted retry budget — failed by startup cleanup',
+    }).eq('id', job.id)
+    await upsertNullContact(job.domain).catch(() => {})
+  }
+  console.log(`[worker] Cleaned up ${data.length} exhausted pending jobs → failed`)
 }
 
 async function claimPendingJobs(count: number) {
@@ -396,6 +431,7 @@ let loopIteration = 0
 async function pollLoop() {
   console.log(`[worker] Starting poll loop (concurrency: ${CONCURRENCY})...`)
   try { await resetStuckJobs() } catch { /* non-fatal on startup */ }
+  try { await failExhaustedPendingJobs() } catch { /* non-fatal on startup */ }
 
   while (true) {
     try {

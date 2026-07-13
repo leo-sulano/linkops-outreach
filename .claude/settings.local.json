@@ -96,7 +96,9 @@
       "Bash(dir /B /S lib\\\\*.ts lib\\\\*.tsx pages\\\\*.ts pages\\\\*.tsx components\\\\*.tsx)",
       "Bash(bash \"C:\\\\Users\\\\Leo\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\6.0.3\\\\skills\\\\subagent-driven-development\\\\scripts\\\\task-brief\" \"docs/superpowers/plans/2026-06-23-worker-stuck-fix.md\" 1)",
       "Bash(node -e \"require\\('dotenv'\\).config\\({ path: '../.env.local' }\\); const { createClient } = require\\('@supabase/supabase-js'\\); const sb = createClient\\(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } }\\); async function main\\(\\) { const { count: processing } = await sb.from\\('lead_jobs'\\).select\\('*', { count: 'exact', head: true }\\).eq\\('status', 'processing'\\); console.log\\('Processing:', processing\\); const { data: pending } = await sb.from\\('lead_jobs'\\).select\\('retry_count'\\).eq\\('status', 'pending'\\); const counts = {}; \\(pending||[]\\).forEach\\(j => { counts[j.retry_count] = \\(counts[j.retry_count]||0\\)+1; }\\); console.log\\('Pending by retry_count:', JSON.stringify\\(counts\\)\\); const { count: paused } = await sb.from\\('lead_jobs'\\).select\\('*', { count: 'exact', head: true }\\).eq\\('status', 'paused'\\); console.log\\('Paused:', paused\\); const { data: hb } = await sb.from\\('worker_heartbeat'\\).select\\('last_seen_at'\\).eq\\('id', 'worker'\\).maybeSingle\\(\\); const age = hb ? Math.round\\(\\(Date.now\\(\\) - new Date\\(hb.last_seen_at\\).getTime\\(\\)\\)/1000\\) : null; console.log\\('Heartbeat age \\(s\\):', age\\); } main\\(\\).catch\\(e => console.error\\(e.message\\)\\);\")",
-      "PowerShell(pm2 install pm2-logrotate)"
+      "PowerShell(pm2 install pm2-logrotate)",
+      "Bash(pm2 list *)",
+      "Bash(pm2 stop *)"
     ]
   }
 }
