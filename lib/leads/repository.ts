@@ -24,6 +24,8 @@ export interface LeadContact {
   contact_name: string | null
   contact_role: string | null
   contact_linkedin: string | null
+  accepts_guest_posts: boolean
+  has_advertise_page: boolean
   new_lead: boolean
   emailed: boolean
   contacted: boolean

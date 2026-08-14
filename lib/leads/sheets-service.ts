@@ -42,6 +42,8 @@ export interface SheetContact {
   contact_name: string | null
   contact_role: string | null
   contact_linkedin: string | null
+  accepts_guest_posts: boolean
+  has_advertise_page: boolean
 }
 
 // Columns: date_found(A) vertical(B) query(C) domain(D) url(E) title(F) type(G) data_collected(H)
@@ -103,7 +105,9 @@ export async function markLeadDataCollected(
 }
 
 // Contacts sheet layout: domain(A) vertical(B) company_type(C) company_name(D) company_email(E) company_linkedin(F)
-// Column A is formula-driven (=Leads!D[row]) — rows auto-exist, we update D:F only.
+// feedback(G) new_lead(H) emailed(I) contacted(J) accepts_guest_posts(K) has_advertise_page(L)
+// Column A is formula-driven (=Leads!D[row]) — rows auto-exist, we update C:F and K:L only
+// (G:J are owned by other flows — feedback/new_lead/emailed/contacted — never touched here).
 // Column F = contact (personal) LinkedIn if found, else company LinkedIn as fallback.
 
 function normalizeDomain(raw: string): string {
@@ -141,16 +145,25 @@ export async function updateSingleContactInSheet(
   const row = domainToRow.get(contact.domain)
   if (!row) return false
 
-  await sheets.spreadsheets.values.update({
+  await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId,
-    range: `${tab}!D${row}:F${row}`,
-    valueInputOption: 'RAW',
     requestBody: {
-      values: [[
-        contact.company_name ?? '',
-        contact.company_email ?? '',
-        contact.contact_linkedin ?? contact.company_linkedin ?? '',
-      ]],
+      valueInputOption: 'RAW',
+      data: [
+        {
+          range: `${tab}!C${row}:F${row}`,
+          values: [[
+            contact.company_type ?? '',
+            contact.company_name ?? '',
+            contact.company_email ?? '',
+            contact.contact_linkedin ?? contact.company_linkedin ?? '',
+          ]],
+        },
+        {
+          range: `${tab}!K${row}:L${row}`,
+          values: [[contact.accepts_guest_posts, contact.has_advertise_page]],
+        },
+      ],
     },
   })
   return true
@@ -178,19 +191,24 @@ export async function updateContactsInSheet(
   const sheets = getSheetsClient()
   const domainToRow = await buildDomainRowMap(sheets, spreadsheetId, tab)
 
-  const data: { range: string; values: string[][] }[] = []
+  const data: { range: string; values: (string | boolean)[][] }[] = []
   let notFound = 0
 
   for (const c of contacts) {
     const row = domainToRow.get(c.domain)
     if (!row) { notFound++; continue }
     data.push({
-      range: `${tab}!D${row}:F${row}`,
+      range: `${tab}!C${row}:F${row}`,
       values: [[
+        c.company_type ?? '',
         c.company_name ?? '',
         c.company_email ?? '',
         c.contact_linkedin ?? c.company_linkedin ?? '',
       ]],
+    })
+    data.push({
+      range: `${tab}!K${row}:L${row}`,
+      values: [[c.accepts_guest_posts, c.has_advertise_page]],
     })
   }
 
