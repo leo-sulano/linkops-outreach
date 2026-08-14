@@ -39,7 +39,14 @@
       "Bash(Remove-Item \"c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/worker/reset-stuck.ts\")",
       "Bash(curl -s -X GET __TRACKED_VAR__/rest/v1/lead_jobs?select=id -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Prefer: count=exact' -I)",
       "Bash(curl -s -X GET __TRACKED_VAR__/rest/v1/lead_contacts?select=domain,company_name,company_email,company_linkedin,contact_name,contact_role,contact_linkedin,new_lead,emailed,contacted -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
-      "Bash(curl -s -X GET '__TRACKED_VAR__/rest/v1/lead_jobs?status=eq.failed&select=domain,error_log,retry_count' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')"
+      "Bash(curl -s -X GET '__TRACKED_VAR__/rest/v1/lead_jobs?status=eq.failed&select=domain,error_log,retry_count' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(chmod 400 \"/c/Users/Leo/OneDrive/Documents/leoscraper/leoscraper.pem\")",
+      "Bash(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -i /c/Users/Leo/OneDrive/Documents/leoscraper/leoscraper.pem ec2-user@54.179.186.205 ' *)",
+      "Bash(ssh -o StrictHostKeyChecking=accept-new -i /c/Users/Leo/OneDrive/Documents/leoscraper/leoscraper.pem ec2-user@54.179.186.205 ' *)",
+      "Bash(ssh -i \"/c/Users/Leo/OneDrive/Documents/leoscraper/leoscraper.pem\" ec2-user@54.179.186.205 'mkdir -p ~/linkops-worker/worker ~/linkops-worker/lib/leads')",
+      "Bash(mkdir -p /c/Users/Leo/AppData/Local/Temp/claude/c--Users-Leo-OneDrive-Desktop-AI-Automation-Internal-Projects-Link-Ops-Outreach/5ca99994-fac1-42b8-836a-e23479b26686/scratchpad)",
+      "Bash(cp 'c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/.env.local' /c/Users/Leo/AppData/Local/Temp/claude/c--Users-Leo-OneDrive-Desktop-AI-Automation-Internal-Projects-Link-Ops-Outreach/5ca99994-fac1-42b8-836a-e23479b26686/scratchpad/.env.local.ec2)",
+      "Bash(printf '\\\\n# scraper-leo co-tenancy guard: pause job claims during Forums Dashboard cron window\\\\nLINKOPS_AVOID_CRON_WINDOW=00:55-01:35\\\\n')"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"
