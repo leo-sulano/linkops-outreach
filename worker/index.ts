@@ -1,6 +1,13 @@
 import * as dotenv from 'dotenv'
 dotenv.config({ path: '../.env.local' })
 
+// Node < 22 has no native WebSocket global, which @supabase/supabase-js's
+// realtime client requires even though this worker never subscribes to anything.
+import NodeWebSocket from 'ws'
+if (typeof (globalThis as any).WebSocket === 'undefined') {
+  ;(globalThis as any).WebSocket = NodeWebSocket
+}
+
 import { createClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
@@ -17,6 +24,39 @@ const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
 const STUCK_JOB_THRESHOLD_MS = 10 * 60 * 1_000 // reset jobs processing > 10 min
 const WATCHDOG_MS = 30 * 60 * 1_000
 let lastJobTerminatedAt = Date.now()
+
+// Optional co-tenancy guard: on shared boxes running other scheduled Chrome jobs
+// (e.g. scraper-leo's Forums Dashboard cron), set LINKOPS_AVOID_CRON_WINDOW to a
+// "HH:MM-HH:MM" UTC range to pause job claiming during that window. Unset by
+// default so local/dev runs and dedicated boxes are unaffected.
+const AVOID_WINDOW_UTC = parseAvoidWindow(process.env.LINKOPS_AVOID_CRON_WINDOW)
+let wasInAvoidWindow = false
+
+function parseAvoidWindow(spec: string | undefined): { startMin: number; endMin: number } | null {
+  if (!spec) return null
+  const m = spec.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/)
+  if (!m) {
+    console.warn(`[worker] Ignoring malformed LINKOPS_AVOID_CRON_WINDOW: "${spec}" (expected "HH:MM-HH:MM")`)
+    return null
+  }
+  const [, sh, sm, eh, em] = m
+  return { startMin: Number(sh) * 60 + Number(sm), endMin: Number(eh) * 60 + Number(em) }
+}
+
+function inAvoidWindow(): boolean {
+  if (!AVOID_WINDOW_UTC) return false
+  const now = new Date()
+  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes()
+  const { startMin, endMin } = AVOID_WINDOW_UTC
+  const inside = startMin <= endMin
+    ? nowMin >= startMin && nowMin < endMin
+    : nowMin >= startMin || nowMin < endMin // wraps past midnight UTC
+  if (inside !== wasInAvoidWindow) {
+    console.log(inside ? '[worker] Entering cron-avoidance window — pausing job claims' : '[worker] Exiting cron-avoidance window — resuming job claims')
+    wasInAvoidWindow = inside
+  }
+  return inside
+}
 
 function getSupabase() {
   return createClient(
@@ -83,6 +123,8 @@ async function failExhaustedPendingJobs() {
 }
 
 async function claimPendingJobs(count: number) {
+  if (inAvoidWindow()) return []
+
   const sb = getSupabase()
 
   // Enforce strict serial execution: don't claim if any job is still in-flight
