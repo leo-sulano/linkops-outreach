@@ -46,7 +46,8 @@
       "Bash(ssh -i \"/c/Users/Leo/OneDrive/Documents/leoscraper/leoscraper.pem\" ec2-user@54.179.186.205 'mkdir -p ~/linkops-worker/worker ~/linkops-worker/lib/leads')",
       "Bash(mkdir -p /c/Users/Leo/AppData/Local/Temp/claude/c--Users-Leo-OneDrive-Desktop-AI-Automation-Internal-Projects-Link-Ops-Outreach/5ca99994-fac1-42b8-836a-e23479b26686/scratchpad)",
       "Bash(cp 'c:/Users/Leo/OneDrive/Desktop/AI Automation/Internal Projects/Link-Ops-Outreach/.env.local' /c/Users/Leo/AppData/Local/Temp/claude/c--Users-Leo-OneDrive-Desktop-AI-Automation-Internal-Projects-Link-Ops-Outreach/5ca99994-fac1-42b8-836a-e23479b26686/scratchpad/.env.local.ec2)",
-      "Bash(printf '\\\\n# scraper-leo co-tenancy guard: pause job claims during Forums Dashboard cron window\\\\nLINKOPS_AVOID_CRON_WINDOW=00:55-01:35\\\\n')"
+      "Bash(printf '\\\\n# scraper-leo co-tenancy guard: pause job claims during Forums Dashboard cron window\\\\nLINKOPS_AVOID_CRON_WINDOW=00:55-01:35\\\\n')",
+      "WebFetch(domain:docs.google.com)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Leo\\.claude"

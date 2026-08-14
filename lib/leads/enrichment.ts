@@ -169,6 +169,20 @@ const GENERIC_CS_PREFIXES = [
   'noreply@', 'no-reply@', 'help@', 'service@', 'feedback@',
 ]
 
+// Placeholder / auto-generated / WHOIS-privacy emails — never a real lead, drop entirely
+const JUNK_EMAIL_PREFIXES = ['example@', 'test@', 'demo@', 'sample@', 'wordpress@', 'godaddy@']
+const JUNK_EMAIL_DOMAINS = [
+  'domainsbyproxy.com', 'whoisguard.com', 'contactprivacy.com',
+  'perfectprivacy.com', 'privacyprotect.org', 'whoisproxy.com',
+  'sentry.io', 'wixpress.com',
+]
+
+function isJunkEmail(email: string): boolean {
+  const lower = email.toLowerCase()
+  if (JUNK_EMAIL_PREFIXES.some((p) => lower.startsWith(p))) return true
+  return JUNK_EMAIL_DOMAINS.some((d) => lower.endsWith('@' + d))
+}
+
 type EmailTier = 'personal' | 'outreach' | 'generic'
 
 function classifyEmail(email: string): EmailTier {
@@ -190,7 +204,8 @@ export function extractMailtoEmail(html: string): string | null {
   let match: RegExpExecArray | null
   const allMailtos: string[] = []
   while ((match = mailtoPattern.exec(html)) !== null) {
-    allMailtos.push(parseMailtoHref(match[1]))
+    const email = parseMailtoHref(match[1])
+    if (!isJunkEmail(email)) allMailtos.push(email)
   }
   if (allMailtos.length === 0) return null
   return allMailtos.find((e) => classifyEmail(e) === 'personal')
@@ -206,13 +221,13 @@ function findEmailInText(src: string, tier: EmailTier | 'dm'): string | null {
   if (tier === 'dm') {
     for (const line of src.split(/\r?\n/)) {
       if (DECISION_MAKER_TITLES.test(line)) {
-        const m = line.match(EMAIL_REGEX)
-        if (m?.[0]) return m[0]
+        const m = (line.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e))
+        if (m) return m
       }
     }
     return null
   }
-  return (src.match(EMAIL_REGEX) ?? []).find((e) => classifyEmail(e) === tier) ?? null
+  return (src.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e) && classifyEmail(e) === tier) ?? null
 }
 
 // Scan plain text for email addresses.
@@ -230,7 +245,7 @@ export function extractEmail(text: string, contactText = ''): string | null {
 
   // Generic last resort — check contact pages first, then all text
   for (const src of sources) {
-    const found = (src.match(EMAIL_REGEX) ?? []).find((e) => classifyEmail(e) === 'generic')
+    const found = (src.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e) && classifyEmail(e) === 'generic')
     if (found) return found
   }
 

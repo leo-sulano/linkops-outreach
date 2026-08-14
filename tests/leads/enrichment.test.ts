@@ -56,6 +56,25 @@ describe('extractMailtoEmail', () => {
   it('returns null when no mailto link found', () => {
     expect(extractMailtoEmail('<p>No contact here</p>')).toBeNull()
   })
+
+  it('skips junk-prefix mailto and falls through to a real one', () => {
+    const html =
+      '<a href="mailto:wordpress@example.com">Admin</a>' +
+      '<a href="mailto:partners@acmecorp.com">Partners</a>'
+    expect(extractMailtoEmail(html)).toBe('partners@acmecorp.com')
+  })
+
+  it('skips WHOIS-privacy domain mailto and falls through to a real one', () => {
+    const html =
+      '<a href="mailto:owner-abc123@domainsbyproxy.com">Registrant</a>' +
+      '<a href="mailto:info@acmecorp.com">Contact</a>'
+    expect(extractMailtoEmail(html)).toBe('info@acmecorp.com')
+  })
+
+  it('returns null when only junk mailtos are present', () => {
+    const html = '<a href="mailto:test@acmecorp.com">Test</a>'
+    expect(extractMailtoEmail(html)).toBeNull()
+  })
 })
 
 describe('extractEmail', () => {
@@ -71,6 +90,15 @@ describe('extractEmail', () => {
 
   it('returns null when no email found', () => {
     expect(extractEmail('No contact info here')).toBeNull()
+  })
+
+  it('skips junk-domain email and falls through to a real one', () => {
+    const text = 'Registrant: privacy@whoisguard.com. Support: hello@acmecorp.com'
+    expect(extractEmail(text)).toBe('hello@acmecorp.com')
+  })
+
+  it('returns null when only a junk email is present', () => {
+    expect(extractEmail('Contact demo@acmecorp.com for a trial')).toBeNull()
   })
 })
 
