@@ -3,34 +3,21 @@ import { Options } from 'selenium-webdriver/chrome'
 import { dismissCookieBanners, runChallenges, detectCaptcha } from './challenges'
 import { extractCompanyName, extractMailtoEmail, extractEmail, extractLinkedInCompany, extractLinkedInPerson, extractContactFromSiteText } from '../lib/leads/enrichment'
 
-// Always-visit paths (checked on every domain)
+// Always-visit paths (checked on every domain).
+// One canonical path per concept — trimmed from 18 to 9 subpages to cut per-job
+// Chrome memory/time on scraper-leo (a shared, memory-constrained t2.small where
+// LinkOps must fit within whatever headroom Forums Dashboard leaves it).
 const STATIC_SUBPAGES = [
   '',
-  // Contact
   '/contact',
-  '/contact-us',
-  // About / Company
   '/about',
-  '/about-us',
-  // Team / People
   '/team',
-  '/our-team',
   '/people',
-  // Advertise / Partner / Affiliate
   '/advertise',
-  '/advertise-with-us',
-  '/partners',
   '/affiliates',
-  '/affiliate-program',
-  // Legal (EU imprint often has full company info + email)
   '/impressum',
-  '/imprint',
-  // Privacy (company name extraction)
   '/privacy',
-  '/privacy-policy',
-  // Terms
   '/terms',
-  '/terms-and-conditions',
 ]
 
 // Keywords used to discover additional same-domain pages from homepage links
@@ -220,7 +207,12 @@ export async function scrapeDomain(
     '--disable-extensions',
     '--disable-plugins',
     '--js-flags=--max-old-space-size=256',
-    '--memory-pressure-off',
+    // Never navigate backward, so bfcache only costs memory: force old renderers
+    // to be torn down on navigation instead of kept alive for a "back" that never
+    // happens. Cap concurrent renderers at 1 since only one page is ever visited
+    // at a time — both matter on scraper-leo's tight, shared memory budget.
+    '--disable-features=BackForwardCache',
+    '--renderer-process-limit=1',
   )
   options.excludeSwitches('enable-automation', 'enable-logging')
   options.setUserPreferences({

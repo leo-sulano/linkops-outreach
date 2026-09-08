@@ -9,6 +9,7 @@ if (typeof (globalThis as any).WebSocket === 'undefined') {
 }
 
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { scrapeDomain } from './scraper'
 import { discoverLinkedInContact } from './linkedin'
 import { aiExtract, regexExtract, AIExtractResult } from './ai-extract'
@@ -20,8 +21,17 @@ const POLL_INTERVAL_MS = 5_000
 const DOMAIN_DELAY_MS = 2_000
 const MAX_RETRIES = 3
 const CONCURRENCY = 1
-const JOB_TIMEOUT_MS = 5 * 60 * 1_000       // 5 min hard cap per job
-const STUCK_JOB_THRESHOLD_MS = 10 * 60 * 1_000 // reset jobs processing > 10 min
+// scraper-leo is a shared, memory-constrained box (Forums Dashboard gets priority
+// on it) — pages load slowly but do eventually complete, so a generous timeout
+// beats retrying/failing jobs that just needed more time. Low volume (~2-3
+// runs/month) means throughput isn't the constraint here.
+const JOB_TIMEOUT_MS = 15 * 60 * 1_000      // 15 min hard cap per job
+// Must stay comfortably above JOB_TIMEOUT_MS: this is a secondary safety net for
+// a job stuck without the abort ever firing (e.g. a crash). If it were <=
+// JOB_TIMEOUT_MS, it could reclaim a job that's still legitimately mid-flight,
+// and the next poll would launch a second Chrome instance for the same domain
+// before the first one's own abort fires — doubling memory right when we need less.
+const STUCK_JOB_THRESHOLD_MS = 20 * 60 * 1_000 // reset jobs processing > 20 min
 const WATCHDOG_MS = 30 * 60 * 1_000
 let lastJobTerminatedAt = Date.now()
 
@@ -58,26 +68,37 @@ function inAvoidWindow(): boolean {
   return inside
 }
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  )
+let supabaseClient: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    )
+  }
+  return supabaseClient
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function resetStuckJobs() {
+// atStartup=true bypasses the age cutoff: a just-started process cannot have any
+// legitimately in-flight job, so every 'processing' row is orphaned (left behind
+// by a killed process, e.g. `pm2 restart`) and safe to reclaim immediately —
+// without this, claimPendingJobs' serial-execution guard would block all new
+// claims until the row aged past STUCK_JOB_THRESHOLD_MS on its own.
+async function resetStuckJobs(atStartup = false) {
   const sb = getSupabase()
   const cutoff = new Date(Date.now() - STUCK_JOB_THRESHOLD_MS).toISOString()
-  const { data } = await sb
+  let query = sb
     .from('lead_jobs')
     .select('id, domain, retry_count')
     .eq('status', 'processing')
-    .lt('started_at', cutoff)
+  if (!atStartup) query = query.lt('started_at', cutoff)
+  const { data } = await query
   if (!data || data.length === 0) return
 
   let resetCount = 0, failedCount = 0
@@ -476,7 +497,7 @@ let loopIteration = 0
 
 async function pollLoop() {
   console.log(`[worker] Starting poll loop (concurrency: ${CONCURRENCY})...`)
-  try { await resetStuckJobs() } catch { /* non-fatal on startup */ }
+  try { await resetStuckJobs(true) } catch { /* non-fatal on startup */ }
   try { await failExhaustedPendingJobs() } catch { /* non-fatal on startup */ }
 
   while (true) {
