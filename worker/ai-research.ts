@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import OpenAI from 'openai'
 import { AIExtractResult } from './ai-extract'
 import { isValidBusinessEmail } from '../lib/leads/enrichment'
 
@@ -41,36 +41,39 @@ function extractJson(text: string): string {
   return match ? match[0] : '{}'
 }
 
-let genAI: GoogleGenerativeAI | null = null
+let client: OpenAI | null = null
 
-function getClient(): GoogleGenerativeAI {
-  if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
-    genAI = new GoogleGenerativeAI(apiKey)
+function getClient(): OpenAI {
+  if (!client) {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
+    client = new OpenAI({ apiKey })
   }
-  return genAI
+  return client
 }
 
-const GEMINI_TIMEOUT_MS = 20_000
+const RESEARCH_TIMEOUT_MS = 20_000
 
 export async function aiResearch(
   domain: string,
   scraped: AIExtractResult
 ): Promise<Partial<AIExtractResult>> {
-  const model = getClient().getGenerativeModel({
-    model: 'gemini-3.6-flash',
-    // Field renamed from googleSearchRetrieval for Gemini 2.0+ models.
-    tools: [{ googleSearch: {} } as any],
-  })
-
-  const result = await Promise.race([
-    model.generateContent(buildPrompt(domain, scraped)),
+  const completion = await Promise.race([
+    getClient().chat.completions.create({
+      // Dedicated search model — gpt-4o-mini's search-enabled variant was deprecated
+      // 2026-07-23. This is the cheaper of the two current web-search-capable models
+      // (the other, gpt-6-astra, runs 8-66x more per token for the same job).
+      // "low" keeps the per-search token cost down; corroboration comes from requiring
+      // 2+ independent sources in the prompt, not from pulling deep page content.
+      model: 'gpt-5-search-api',
+      web_search_options: { search_context_size: 'low' },
+      messages: [{ role: 'user', content: buildPrompt(domain, scraped) }],
+    }),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini research timed out')), GEMINI_TIMEOUT_MS)
+      setTimeout(() => reject(new Error('Web research timed out')), RESEARCH_TIMEOUT_MS)
     ),
   ])
-  const text = result.response.text()
+  const text = completion.choices[0]?.message?.content ?? ''
 
   let parsed: Record<string, unknown>
   try {
