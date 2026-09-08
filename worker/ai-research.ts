@@ -25,6 +25,8 @@ Use web search to verify and enrich these findings:
 
 IMPORTANT RULE: For each field, return a value ONLY if you found it corroborated in 2 or more INDEPENDENT sources. Sources must have different domain origins — for example, LinkedIn + Companies House is valid; two pages on ${domain} itself is NOT independent.
 
+IMPORTANT RULE: contact_name, contact_role, and contact_linkedin must all identify the SAME single individual — do not combine a name found in one source with a LinkedIn profile found via an unrelated search. If you cannot confirm the LinkedIn profile belongs to the specific person named in contact_name, return contact_linkedin as null rather than a different person's profile.
+
 Return ONLY this JSON object. No markdown, no explanation, no extra keys:
 {
   "company_name": string or null,
