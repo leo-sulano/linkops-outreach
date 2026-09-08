@@ -183,6 +183,23 @@ function isJunkEmail(email: string): boolean {
   return JUNK_EMAIL_DOMAINS.some((d) => lower.endsWith('@' + d))
 }
 
+const EMAIL_FULL_MATCH_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+// Domain segment starting with "www." is never a real mailbox — nobody configures mail for
+// that subdomain. In practice this shape only shows up when something stitched two separate
+// on-page fragments together (e.g. an LLM combining a nearby word with the site's own URL),
+// not from a real address a site actually published.
+function hasWwwDomain(email: string): boolean {
+  const at = email.lastIndexOf('@')
+  return at !== -1 && email.slice(at + 1).toLowerCase().startsWith('www.')
+}
+
+// Shared sanity gate for a candidate email regardless of source (regex extraction or an
+// LLM's output) — catches malformed/synthesized addresses before they reach a contact record.
+export function isValidBusinessEmail(email: string): boolean {
+  return EMAIL_FULL_MATCH_RE.test(email) && !isJunkEmail(email) && !hasWwwDomain(email)
+}
+
 type EmailTier = 'personal' | 'outreach' | 'generic'
 
 function classifyEmail(email: string): EmailTier {
@@ -205,7 +222,7 @@ export function extractMailtoEmail(html: string): string | null {
   const allMailtos: string[] = []
   while ((match = mailtoPattern.exec(html)) !== null) {
     const email = parseMailtoHref(match[1])
-    if (!isJunkEmail(email)) allMailtos.push(email)
+    if (isValidBusinessEmail(email)) allMailtos.push(email)
   }
   if (allMailtos.length === 0) return null
   return allMailtos.find((e) => classifyEmail(e) === 'personal')
@@ -221,13 +238,13 @@ function findEmailInText(src: string, tier: EmailTier | 'dm'): string | null {
   if (tier === 'dm') {
     for (const line of src.split(/\r?\n/)) {
       if (DECISION_MAKER_TITLES.test(line)) {
-        const m = (line.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e))
+        const m = (line.match(EMAIL_REGEX) ?? []).find((e) => isValidBusinessEmail(e))
         if (m) return m
       }
     }
     return null
   }
-  return (src.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e) && classifyEmail(e) === tier) ?? null
+  return (src.match(EMAIL_REGEX) ?? []).find((e) => isValidBusinessEmail(e) && classifyEmail(e) === tier) ?? null
 }
 
 // Scan plain text for email addresses.
@@ -245,7 +262,7 @@ export function extractEmail(text: string, contactText = ''): string | null {
 
   // Generic last resort — check contact pages first, then all text
   for (const src of sources) {
-    const found = (src.match(EMAIL_REGEX) ?? []).find((e) => !isJunkEmail(e) && classifyEmail(e) === 'generic')
+    const found = (src.match(EMAIL_REGEX) ?? []).find((e) => isValidBusinessEmail(e) && classifyEmail(e) === 'generic')
     if (found) return found
   }
 

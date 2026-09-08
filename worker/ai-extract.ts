@@ -6,6 +6,7 @@ import {
   extractLinkedInCompany,
   extractLinkedInPerson,
   extractContactFromSiteText,
+  isValidBusinessEmail,
 } from '../lib/leads/enrichment'
 
 export interface AIExtractResult {
@@ -162,9 +163,15 @@ export async function aiExtract(
     parsed = {}
   }
 
+  // The model's output is taken on faith otherwise — validate company_email specifically since
+  // the "extract even if obfuscated" instruction above invites it to reconstruct an address from
+  // page fragments, which can synthesize a plausible-looking but non-existent email.
+  const rawEmail = typeof parsed.company_email === 'string' ? parsed.company_email : null
+  const validatedEmail = rawEmail && isValidBusinessEmail(rawEmail) ? rawEmail : null
+
   return {
     company_name: parsed.company_name ?? null,
-    company_email: parsed.company_email ?? null,
+    company_email: validatedEmail,
     contact_name: parsed.contact_name ?? null,
     contact_role: parsed.contact_role ?? null,
     company_linkedin: parsed.company_linkedin ?? null,

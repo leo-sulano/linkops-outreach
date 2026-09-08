@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AIExtractResult } from './ai-extract'
+import { isValidBusinessEmail } from '../lib/leads/enrichment'
 
 function buildPrompt(domain: string, scraped: AIExtractResult): string {
   const hints = [
@@ -82,7 +83,7 @@ export async function aiResearch(
   if (typeof parsed.company_name === 'string' && parsed.company_name) out.company_name = parsed.company_name
   if (typeof parsed.contact_name === 'string' && parsed.contact_name) out.contact_name = parsed.contact_name
   if (typeof parsed.contact_role === 'string' && parsed.contact_role) out.contact_role = parsed.contact_role
-  if (typeof parsed.company_email === 'string' && parsed.company_email) out.company_email = parsed.company_email
+  if (typeof parsed.company_email === 'string' && isValidBusinessEmail(parsed.company_email)) out.company_email = parsed.company_email
   if (typeof parsed.company_linkedin === 'string' && parsed.company_linkedin) out.company_linkedin = parsed.company_linkedin
   if (typeof parsed.contact_linkedin === 'string' && parsed.contact_linkedin) out.contact_linkedin = parsed.contact_linkedin
 
