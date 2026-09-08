@@ -139,7 +139,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
         const currentPending = workerCounts.pending
         const currentAlive = workerAlive
         if (!currentAlive) {
-          setMessage(`⚠ Worker is not running. Start it first: open a terminal in worker/ and run "node start.js"`)
+          setMessage(`⚠ Worker is not running. On scraper-leo (EC2), run: pm2 restart linkops-worker — see docs/ec2-worker-runbook.md if it won't come back up.`)
         } else if (currentPending > 0) {
           setMessage(`Worker is running — ${currentPending} jobs pending. Scraping will begin shortly.`)
         } else {
@@ -261,7 +261,7 @@ export default function LeadsOverviewPage({ stats: initialStats }: { stats: Lead
           </span>
 
           <button
-            onClick={() => setShowWorkerModal(true)}
+            onClick={() => (workerAlive ? startScraping() : setShowWorkerModal(true))}
             disabled={busy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
           >
