@@ -244,7 +244,11 @@ export async function scrapeDomain(
   const abortHandler = () => { driver?.quit().catch(() => {}) }
   signal?.addEventListener('abort', abortHandler, { once: true })
 
-  await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 5_000 })
+  // Kept short: this wait applies to every findElement/findElements call made against an
+  // already-loaded page (cookie-banner probes, captcha-widget checks, iframe enumeration).
+  // At 5s it multiplied out to 30-60+s of dead time per page on sites with no banner/captcha
+  // present, which alone was enough to blow the whole job's time budget across a few subpages.
+  await driver.manage().setTimeouts({ pageLoad: PAGE_TIMEOUT_MS, implicit: 1_000 })
 
   // Set UA with full platform/language context for all network requests
   await (driver as any).sendDevToolsCommand('Network.setUserAgentOverride', {

@@ -42,16 +42,19 @@ function getSolver(): Solver | null {
   return new Solver(key)
 }
 
+// Joined into one selector so a miss costs one implicit-wait period instead of
+// one per selector — with 7 selectors and no banner present, the old per-selector
+// loop burned ~35s (7 × 5s implicit wait) on every single page visited.
+const FRAMEWORK_SELECTORS_COMBINED = FRAMEWORK_SELECTORS.join(', ')
+
 async function dismissInFrame(driver: WebDriver): Promise<boolean> {
-  // Pass 1: known framework selectors
-  for (const selector of FRAMEWORK_SELECTORS) {
-    try {
-      const el = await driver.findElement(By.css(selector))
-      await el.click()
-      await sleep(1000)
-      return true
-    } catch { /* not found — try next */ }
-  }
+  // Pass 1: known framework selectors (single combined lookup — see note above)
+  try {
+    const el = await driver.findElement(By.css(FRAMEWORK_SELECTORS_COMBINED))
+    await el.click()
+    await sleep(1000)
+    return true
+  } catch { /* none matched */ }
 
   // Pass 2: text scan
   try {
@@ -140,20 +143,13 @@ export async function detectCaptcha(
     }
   } catch { /* ignore */ }
 
-  // Check DOM for captcha widgets
-  const CAPTCHA_SELECTORS = [
-    '.cf-turnstile',
-    '.g-recaptcha',
-    '.h-captcha',
-    '[data-sitekey]',
-    '.captcha-solver',
-  ]
-  for (const selector of CAPTCHA_SELECTORS) {
-    try {
-      await driver.findElement(By.css(selector))
-      return true
-    } catch { /* not found */ }
-  }
+  // Check DOM for captcha widgets — one combined lookup (see FRAMEWORK_SELECTORS_COMBINED
+  // note above): looping these individually cost a full implicit wait per miss.
+  const CAPTCHA_SELECTORS_COMBINED = '.cf-turnstile, .g-recaptcha, .h-captcha, [data-sitekey], .captcha-solver'
+  try {
+    await driver.findElement(By.css(CAPTCHA_SELECTORS_COMBINED))
+    return true
+  } catch { /* not found */ }
 
   return false
 }
