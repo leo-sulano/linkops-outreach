@@ -269,15 +269,23 @@ async function processJob(job: {
     } else {
       console.log(`[worker] ${job.domain} → Gemini research skipped (all fields populated)`)
     }
-    // Gemini fills only fields that scraping left null — never overwrites a scraped value
+    // company_name: research wins when present. Scraping only sees the site's own
+    // branding (title tag, footer) — resolving to the actual registered/parent entity
+    // (e.g. "The Lines" -> "Catena Media") is exactly what the 2-source-corroborated
+    // research step is for, so a validated research answer should replace it.
+    //
+    // Everything else: scraped wins, research only fills a true gap. A mailto: or
+    // LinkedIn link found directly on the site is more trustworthy than a web-search
+    // guess at the same field, so research should not override a value scraping
+    // already found.
     const merged: AIExtractResult = {
       ...extracted,
       company_name:      researched.company_name      ?? extracted.company_name,
-      company_email:     researched.company_email     ?? extracted.company_email,
-      contact_name:      researched.contact_name      ?? extracted.contact_name,
-      contact_role:      researched.contact_role      ?? extracted.contact_role,
-      company_linkedin:  researched.company_linkedin  ?? extracted.company_linkedin,
-      contact_linkedin:  researched.contact_linkedin  ?? extracted.contact_linkedin,
+      company_email:     extracted.company_email      ?? researched.company_email,
+      contact_name:      extracted.contact_name       ?? researched.contact_name,
+      contact_role:      extracted.contact_role       ?? researched.contact_role,
+      company_linkedin:  extracted.company_linkedin   ?? researched.company_linkedin,
+      contact_linkedin:  extracted.contact_linkedin   ?? researched.contact_linkedin,
     } as AIExtractResult
 
     const company_name = merged.company_name
