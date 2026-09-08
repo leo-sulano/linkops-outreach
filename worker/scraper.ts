@@ -196,7 +196,13 @@ export async function scrapeDomain(
   options.addArguments(
     '--headless=new',
     '--no-sandbox',
-    '--disable-dev-shm-usage',
+    // Deliberately omitting --disable-dev-shm-usage: that flag exists for tiny-shm
+    // environments (e.g. Docker's 64MB default) and redirects Chrome's shared-memory
+    // segments into /tmp instead. On this EC2 box /dev/shm is a full, dedicated tmpfs
+    // (same size as /tmp) that sits completely unused — forcing shared memory into
+    // /tmp instead made every Chrome instance compete with its own profile writes for
+    // the same small pool, which is what was actually filling /tmp and crashing Chrome
+    // ("session not created" / "failed to write prefs file"), not disk/profile bloat.
     '--window-size=1920,1080',
     '--disable-blink-features=AutomationControlled',
     '--lang=en-US,en',
