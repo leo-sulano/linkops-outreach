@@ -23,6 +23,8 @@ Use web search to verify and enrich these findings:
 3. Who is the founder, CEO, or owner? (check LinkedIn, About pages, press mentions)
 4. Is there a public business email or LinkedIn profile for the company or its decision maker?
 
+Be efficient: use as few searches as necessary. Prefer a single search that's likely to confirm multiple fields at once (e.g. a company registry or LinkedIn page often shows the legal name and a decision maker together) over separate searches per field. Stop searching as soon as a field meets the 2-source corroboration bar below — do not keep searching for additional confirmation once that bar is met.
+
 IMPORTANT RULE: For each field, return a value ONLY if you found it corroborated in 2 or more INDEPENDENT sources. Sources must have different domain origins — for example, LinkedIn + Companies House is valid; two pages on ${domain} itself is NOT independent.
 
 IMPORTANT RULE: contact_name, contact_role, and contact_linkedin must all identify the SAME single individual — do not combine a name found in one source with a LinkedIn profile found via an unrelated search. If you cannot confirm the LinkedIn profile belongs to the specific person named in contact_name, return contact_linkedin as null rather than a different person's profile.
